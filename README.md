@@ -8,7 +8,7 @@
 
 ##  BPMN Diagram
 
-![Hospital Appointment Optimization System - BPMN Diagram](screenshots/1.png)
+![Hospital Appointment Optimization System - BPMN Diagram](screenshots/1.PNG)
 
 *Business Process Flow showing the complete appointment scheduling workflow across six swimlanes*
 

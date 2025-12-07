@@ -463,6 +463,53 @@ The Healthcare Management System consists of **10 core entities**:
    - Email optional, phone mandatory
 
 ---
+# Phase IV: Database Creation
+
+---
+
+## Overview
+
+This phase involves creating and configuring the Oracle Pluggable Database (PDB) for the Hospital Appointment Optimization System. The database is designed to support healthcare operations including patient management, appointment scheduling, medical records, billing, and comprehensive audit trails.
+
+---
+
+## Database Configuration Summary
+
+### Database Details
+- **PDB Name:** `WED_27400_CELINE_HOSPITALAPPTOPT_DB`
+- **Database Type:** Oracle 21c Enterprise Edition
+- **Status:** READ WRITE, Accessible
+- **Created:** December 3, 2025
+
+### Admin User
+- **Username:** `celine_admin`
+- **Password:** `celine`
+- **Privileges:** DBA, PDB_DBA (Super Admin)
+- **Default Tablespace:** HOSPITAL_DATA
+- **Temporary Tablespace:** HOSPITAL_TEMP
+
+### Tablespace Configuration
+
+| Tablespace Name | Type | Initial Size | Max Size | Autoextend | Purpose |
+|----------------|------|--------------|----------|------------|---------|
+| HOSPITAL_DATA | PERMANENT | 300 MB | 2048 MB | YES (50 MB) | Main data storage |
+| HOSPITAL_INDEXES | PERMANENT | 150 MB | 1024 MB | YES (25 MB) | Index storage |
+| HOSPITAL_LOBS | PERMANENT | 100 MB | 500 MB | YES (20 MB) | Large objects (CLOB) |
+| HOSPITAL_AUDIT | PERMANENT | 100 MB | 500 MB | YES (20 MB) | Audit log storage |
+| HOSPITAL_TEMP | TEMPORARY | 100 MB | 500 MB | YES (20 MB) | Temporary operations |
+
+### Memory Configuration
+- **SGA Target:** 512 MB (configurable)
+- **PGA Aggregate Target:** 550 MB
+- **Memory Target:** 1 GB (Automatic Memory Management)
+
+### Archive Logging
+- **Status:** Enabled
+- **Archive Mode:** ARCHIVELOG
+- **Archive Destination:** `C:\app\homes\OraDC21Home1\RDBMS`
+- **Current Log Sequence:** 36
+
+---
 
 **Course:** Database Development with PL/SQL (INSY 8311)  
 **Institution:** Adventist University of Central Africa (AUCA)  

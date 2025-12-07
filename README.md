@@ -1,5 +1,5 @@
-**Student Name:** Umukamisha Celine  
-**Student ID:** 27400 
+**Name:** Umukamisha Celine  
+**ID:** 27400 
 ## Hospital Appointment Optimization System
 
 

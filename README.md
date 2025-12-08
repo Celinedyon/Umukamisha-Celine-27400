@@ -478,8 +478,6 @@ This phase involves creating and configuring the Oracle Pluggable Database (PDB)
 ### Database Details
 - **PDB Name:** `WED_27400_CELINE_HOSPITALAPPTOPT_DB`
 - **Database Type:** Oracle 21c Enterprise Edition
-- **Status:** READ WRITE, Accessible
-- **Created:** December 3, 2025
 
 ### Admin User
 - **Username:** `celine_admin`
@@ -508,6 +506,304 @@ This phase involves creating and configuring the Oracle Pluggable Database (PDB)
 - **Archive Mode:** ARCHIVELOG
 - **Archive Destination:** `C:\app\homes\OraDC21Home1\RDBMS`
 - **Current Log Sequence:** 36
+
+---
+# Phase IV: Database Creation
+
+**Project:** Hospital Appointment Optimization System  
+**Student:** Umukamisha Celine  
+**Student ID:** 27400  
+**Database Name:** `wed_27400_celine_HospitalAppOpt_db`  
+
+---
+
+## Overview
+
+This phase involves creating and configuring the Oracle Pluggable Database (PDB) for the Hospital Appointment Optimization System. The database is designed to support healthcare operations including patient management, appointment scheduling, medical records, billing, and comprehensive audit trails.
+
+---
+
+## Database Configuration Summary
+
+### Database Details
+- **PDB Name:** `WED_27400_CELINE_HOSPITALAPPTOPT_DB`
+- **Database Type:** Oracle 21c Enterprise Edition
+- **Status:** READ WRITE, Accessible
+
+### Admin User
+- **Username:** `celine_admin`
+- **Password:** `celine`
+- **Privileges:** DBA, PDB_DBA (Super Admin)
+- **Default Tablespace:** HOSPITAL_DATA
+- **Temporary Tablespace:** HOSPITAL_TEMP
+
+### Tablespace Configuration
+
+| Tablespace Name | Type | Initial Size | Max Size | Autoextend | Purpose |
+|----------------|------|--------------|----------|------------|---------|
+| HOSPITAL_DATA | PERMANENT | 300 MB | 2048 MB | YES (50 MB) | Main data storage |
+| HOSPITAL_INDEXES | PERMANENT | 150 MB | 1024 MB | YES (25 MB) | Index storage |
+| HOSPITAL_LOBS | PERMANENT | 100 MB | 500 MB | YES (20 MB) | Large objects (CLOB) |
+| HOSPITAL_AUDIT | PERMANENT | 100 MB | 500 MB | YES (20 MB) | Audit log storage |
+| HOSPITAL_TEMP | TEMPORARY | 100 MB | 500 MB | YES (20 MB) | Temporary operations |
+
+### Memory Configuration
+- **SGA Target:** 512 MB (configurable)
+- **PGA Aggregate Target:** 550 MB
+- **Memory Target:** 1 GB (Automatic Memory Management)
+
+### Archive Logging
+- **Status:** Enabled
+- **Archive Mode:** ARCHIVELOG
+- **Archive Destination:** `C:\app\homes\OraDC21Home1\RDBMS`
+- **Current Log Sequence:** 36
+
+---
+
+
+
+### 1. Connect to CDB as SYSDBA
+```sql
+sqlplus sys/password@localhost:1521/ORCL as sysdba
+```
+
+### 2. Create Pluggable Database
+```sql
+@01_create_database.sql
+```
+
+### 3. Switch to PDB
+```sql
+ALTER SESSION SET CONTAINER = wed_27400_celine_HospitalAppOpt_db;
+```
+
+### 4. Create Tablespaces
+```sql
+@02_create_tablespaces.sql
+```
+
+### 5. Configure Admin User
+```sql
+@03_configure_user.sql
+```
+
+### 6. Verify Installation
+```sql
+@05_verification_queries.sql
+```
+
+---
+
+## Verification Results
+
+### Step 1: Database Creation
+
+**SQL Command:**
+```sql
+CREATE PLUGGABLE DATABASE wed_27400_celine_HospitalAppOpt_db
+ADMIN USER celine_admin IDENTIFIED BY celine
+FILE_NAME_CONVERT = ('pdbseed', 'wed_27400_celine_HospitalAppOpt_db');
+```
+
+![PDB Creation](screenshots/01_pdb_creation.png)
+*CREATE PLUGGABLE DATABASE command execution*
+
+**SQL Command:**
+```sql
+SELECT name AS pdb_name, 
+       open_mode AS status,
+       CASE restricted 
+           WHEN 'NO' THEN 'Accessible' 
+           ELSE 'Restricted' 
+       END AS access_mode,
+       TO_CHAR(open_time, 'YYYY-MM-DD HH24:MI:SS') AS opened_at
+FROM v$pdbs 
+WHERE name = 'WED_27400_CELINE_HOSPITALAPPTOPT_DB';
+```
+
+![PDB Status](screenshots/02_pdb_status.png)
+*PDB status verification - READ WRITE, Accessible*
+
+**SQL Command:**
+```sql
+ALTER SESSION SET CONTAINER = wed_27400_celine_HospitalAppOpt_db;
+```
+
+![Session Container](screenshots/03_session_container.png)
+*ALTER SESSION SET CONTAINER command*
+
+**SQL Command:**
+```sql
+SELECT SYS_CONTEXT('USERENV', 'CON_NAME') AS current_container FROM dual;
+```
+
+![Current Container](screenshots/04_current_container.png)
+*Current container verification*
+
+---
+
+### Step 2: Tablespace Configuration
+
+**SQL Commands:**
+```sql
+-- Main Data Tablespace
+CREATE TABLESPACE HOSPITAL_DATA
+DATAFILE 'hospital_data01.dbf' SIZE 300M
+AUTOEXTEND ON NEXT 50M MAXSIZE 2048M
+EXTENT MANAGEMENT LOCAL AUTOALLOCATE
+SEGMENT SPACE MANAGEMENT AUTO;
+
+-- Index Tablespace
+CREATE TABLESPACE HOSPITAL_INDEXES
+DATAFILE 'hospital_indexes01.dbf' SIZE 150M
+AUTOEXTEND ON NEXT 25M MAXSIZE 1024M
+EXTENT MANAGEMENT LOCAL AUTOALLOCATE
+SEGMENT SPACE MANAGEMENT AUTO;
+
+-- Large Objects Tablespace
+CREATE TABLESPACE HOSPITAL_LOBS
+DATAFILE 'hospital_lobs01.dbf' SIZE 100M
+AUTOEXTEND ON NEXT 20M MAXSIZE 500M
+EXTENT MANAGEMENT LOCAL AUTOALLOCATE
+SEGMENT SPACE MANAGEMENT AUTO;
+
+-- Audit Log Tablespace
+CREATE TABLESPACE HOSPITAL_AUDIT
+DATAFILE 'hospital_audit01.dbf' SIZE 100M
+AUTOEXTEND ON NEXT 20M MAXSIZE 500M
+EXTENT MANAGEMENT LOCAL AUTOALLOCATE
+SEGMENT SPACE MANAGEMENT AUTO;
+
+-- Temporary Tablespace
+CREATE TEMPORARY TABLESPACE HOSPITAL_TEMP
+TEMPFILE 'hospital_temp01.dbf' SIZE 100M
+AUTOEXTEND ON NEXT 20M MAXSIZE 500M
+EXTENT MANAGEMENT LOCAL UNIFORM SIZE 1M;
+```
+
+![Tablespaces Created](screenshots/05_tablespaces_created.png)
+*All 5 tablespaces created successfully*
+
+**SQL Command:**
+```sql
+SELECT tablespace_name, status, contents, extent_management, segment_space_management
+FROM dba_tablespaces
+WHERE tablespace_name LIKE 'HOSPITAL%'
+ORDER BY tablespace_name;
+```
+
+![Tablespace Status](screenshots/06_tablespace_status.png)
+*Tablespaces ONLINE and PERMANENT status*
+
+**SQL Command:**
+```sql
+SELECT tablespace_name, 
+       ROUND(SUM(bytes)/1024/1024, 2) AS size_mb,
+       ROUND(SUM(maxbytes)/1024/1024, 2) AS max_mb,
+       autoextensible
+FROM dba_data_files
+WHERE tablespace_name LIKE 'HOSPITAL%'
+GROUP BY tablespace_name, autoextensible
+ORDER BY tablespace_name;
+```
+
+![Tablespace Sizes](screenshots/07_tablespace_sizes.png)
+*Tablespace sizes and autoextend configuration*
+
+---
+
+### Step 3: Admin User Configuration
+
+**SQL Commands:**
+```sql
+-- Grant DBA role to admin user
+GRANT DBA TO celine_admin;
+
+-- Grant PDB_DBA role
+GRANT PDB_DBA TO celine_admin;
+
+-- Set default and temporary tablespaces
+ALTER USER celine_admin 
+DEFAULT TABLESPACE HOSPITAL_DATA
+TEMPORARY TABLESPACE HOSPITAL_TEMP
+QUOTA UNLIMITED ON HOSPITAL_DATA
+QUOTA UNLIMITED ON HOSPITAL_INDEXES
+QUOTA UNLIMITED ON HOSPITAL_LOBS
+QUOTA UNLIMITED ON HOSPITAL_AUDIT;
+```
+
+**SQL Command:**
+```sql
+SELECT grantee, granted_role
+FROM dba_role_privs
+WHERE grantee = 'CELINE_ADMIN'
+ORDER BY granted_role;
+```
+
+![User Privileges](screenshots/08_user_privileges.png)
+*DBA and PDB_DBA roles granted to CELINE_ADMIN*
+
+**SQL Command:**
+```sql
+SELECT username, default_tablespace, temporary_tablespace, account_status
+FROM dba_users
+WHERE username = 'CELINE_ADMIN';
+```
+
+![User Configuration](screenshots/09_user_config.png)
+*Default and temporary tablespace assignment*
+
+---
+
+### Step 4: Memory Configuration
+
+**SQL Commands:**
+```sql
+-- Set memory parameters
+ALTER SYSTEM SET sga_target = 512M SCOPE = BOTH;
+ALTER SYSTEM SET pga_aggregate_target = 256M SCOPE = BOTH;
+ALTER SYSTEM SET memory_target = 1G SCOPE = BOTH;
+```
+
+**SQL Command:**
+```sql
+SELECT name AS parameter, value AS current_value, isdefault
+FROM v$parameter
+WHERE name IN ('memory_target', 'sga_target', 'pga_aggregate_target')
+ORDER BY name;
+```
+
+![Memory Parameters](screenshots/10_memory_params.png)
+*SGA, PGA, and memory_target settings*
+
+---
+
+### Step 5: Archive Logging
+
+**SQL Command:**
+```sql
+ARCHIVE LOG LIST;
+```
+
+![Archive Log Status](screenshots/11_archive_log.png)
+*Archive log mode enabled and destination configured*
+
+---
+
+## Connection Instructions
+
+### Using SQL*Plus
+```bash
+sqlplus celine_admin/celine@localhost:1521/wed_27400_celine_HospitalAppOpt_db
+```
+
+### Using SQL Developer
+- **Connection Name:** Hospital_AppOpt_DB
+- **Username:** celine_admin
+- **Password:** celine
+- **Hostname:** localhost
+- **Port:** 1521
+- **Service Name:** wed_27400_celine_HospitalAppOpt_db
 
 ---
 

@@ -512,7 +512,7 @@ FROM v$pdbs
 WHERE name = 'WED_27400_CELINE_HOSPITALAPPTOPT_DB';
 ```
 
-![Check PDB Status](screenshots/checkingpdbifcreatedopen.PNG)
+![Check PDB Status](screenshots/checkingpdbif%20createdopen.PNG)
 
 ---
 
@@ -523,7 +523,7 @@ ALTER SESSION SET CONTAINER = wed_27400_celine_HospitalAppOpt_db;
 SELECT SYS_CONTEXT('USERENV', 'CON_NAME') AS current_container FROM dual;
 ```
 
-![Confirm Container](screenshots/confirmifaminthecorrectcontainer.PNG)
+![Confirm Container](screenshots/confirmifamin%20thecorrectcontainer.PNG)
 
 ---
 

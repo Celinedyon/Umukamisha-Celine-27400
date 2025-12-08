@@ -563,7 +563,7 @@ FROM dba_role_privs
 WHERE grantee = 'CELINE_ADMIN';
 ```
 
-![Admin Privileges](sceenshots/adminpriviledge.PNG)
+![Admin Privileges](sceenshots/priviledge.PNG)
 
 ---
 
@@ -572,7 +572,7 @@ WHERE grantee = 'CELINE_ADMIN';
 ARCHIVE LOG LIST;
 ```
 
-![Archive Logs](sceenshots/archivelogs.PNG)
+![Archive Logs](sceenshots/archive.PNG)
 
 ---
 

@@ -774,10 +774,316 @@ Comprehensive dataset inserted across all tables meeting phase requirements.
 **Total Records:** 811 rows across all tables
 
 ---
+### 5.5.6 Sample Data Display
 
-## 5.6 Data Integrity Verification
+Realistic test data successfully inserted across all tables. Below are sample records from each table demonstrating data quality and completeness.
 
-### 5.6.1 Constraint Validation
+---
+
+#### APPOINTMENTS Sample Data
+
+**SQL Query:**
+```sql
+SELECT * FROM appointments;
+```
+
+![Appointments Sample Data](screenshots/appointments_data.PNG)
+
+**Sample Records Show:**
+- Appointment IDs 1-12 with scheduled dates (December 2025)
+- Patient and doctor assignments
+- Appointment times and reasons (Routine Checkup, Cardiology Consultation, Preventive Care, Neurology Consultation, Epilepsy Consultation, Stroke Consultation, Orthopedic Consultation, Sports Injury, Spine Surgery Consultation, Pediatrics Checkup, Pediatric Cardiology, Pediatric Surgery)
+- All appointments currently in 'SCHEDULED' status
+- Created dates properly timestamped (08-DEC-25)
+- Notes field for additional context
+
+---
+
+#### AUDIT_LOG Sample Data
+
+**SQL Query:**
+```sql
+SELECT * FROM audit_log;
+```
+
+![Audit Log Sample Data](screenshots/auditlog_data.PNG)
+
+**Audit Trail Demonstrates:**
+- Complete DML operation tracking (INSERT, UPDATE)
+- Multiple user activities (admin, nurse1, doctor1, doctor2, pharmacist1, billing1, billing2)
+- Operations across all tables (PATIENTS, MEDICAL_RECORDS, PRESCRIPTIONS, BILLING, DOCTOR_SCHEDULE)
+- IP addresses captured (192.168.1.10-16)
+- All operations currently 'ALLOWED' status
+- Detailed before/after values for audit compliance
+- Timestamped operations (08-DEC-25 03:46:16 - 03:50:08)
+
+**Operations Logged:**
+1. New patient added (admin)
+2. Patient age updated (nurse1)
+3. Medical record created (doctor1)
+4. Test results added (doctor2)
+5. Prescription issued (doctor1)
+6. Dosage updated (pharmacist1)
+7. Billing record created (billing1)
+8. Payment status updated (billing2)
+9. Doctor schedule added (admin)
+10. Max appointments changed (admin)
+
+---
+
+#### DOCTORS Sample Data
+
+**SQL Query:**
+```sql
+SELECT * FROM doctors;
+```
+
+![Doctors Sample Data](screenshots/doctors_data.PNG)
+
+**Doctor Records Include:**
+- 24 doctors with diverse specializations
+- Department assignments across 8 departments
+- Complete contact information (phone, email)
+- Hire dates spanning 2017-2021
+- Consultation fees ranging from 180-300
+- Mixed statuses: ACTIVE (majority), INACTIVE (1 doctor), ON_LEAVE (1 doctor)
+
+**Sample Specializations:**
+- Interventional Cardiology ($250)
+- Cardiac Surgery ($300)
+- Preventive Cardiology ($200)
+- Neurosurgery ($350)
+- Epilepsy ($220)
+- Stroke Medicine ($240)
+- Joint Replacement ($280)
+- Sports Medicine ($230)
+- Spine Surgery ($320)
+- General Pediatrics ($180)
+- Pediatric Cardiology ($220)
+- Pediatric Surgery ($250)
+- Cosmetic Dermatology ($200)
+- Dermatopathology ($190)
+- Pediatric Dermatology ($210)
+- Laparoscopic Surgery ($290)
+- Trauma Surgery ($310)
+- Bariatric Surgery ($270)
+- Obstetrics ($240)
+- Reproductive Endocrinology ($260)
+- Gynecologic Oncology ($280)
+- Clinical Psychiatry ($200)
+- Child Psychiatry ($210)
+- Addiction Psychiatry ($190)
+
+---
+
+#### DOCTOR_SCHEDULE Sample Data
+
+**SQL Query:**
+```sql
+SELECT * FROM doctor_schedule;
+```
+
+![Doctor Schedule Sample Data](screenshots/schedule_data.PNG)
+
+**Schedule Patterns Show:**
+- 20 schedule entries covering different doctors and days
+- Weekly recurring schedules across Monday-Thursday
+- Varied shift times (08:00-18:00 patterns)
+- Appointment capacities ranging from 6-12 patients per day
+- All schedules currently ACTIVE status
+
+**Sample Schedules:**
+- Schedule 1: Doctor 1, Monday, 08:00-13:00, 10 appointments
+- Schedule 2: Doctor 1, Wednesday, 10:00-18:00, 10 appointments
+- Schedule 3: Doctor 2, Tuesday, 09:00-17:00, 12 appointments
+- Schedule 4: Doctor 2, Thursday, 09:00-13:00, 12 appointments
+- Schedule 5: Doctor 3, Monday, 08:00-15:00, 8 appointments
+- Schedule 6: Doctor 3, Friday, 09:00-13:00, 8 appointments
+
+**Coverage Analysis:**
+- Monday: 4 doctors available (34 appointment slots)
+- Tuesday: 3 doctors available (30 appointment slots)
+- Wednesday: 4 doctors available (34 appointment slots)
+- Thursday: 5 doctors available (44 appointment slots)
+- Friday: 2 doctors available (16 appointment slots)
+
+---
+
+#### HOLIDAYS Sample Data
+
+**SQL Query:**
+```sql
+SELECT * FROM holidays;
+```
+
+![Holidays Sample Data](screenshots/holidays_data.PNG)
+
+**Holiday Calendar Includes:**
+- 20 holidays spanning entire 2026 calendar year
+- Three holiday types: PUBLIC (12), HOSPITAL (4), NATIONAL (4)
+- US federal holidays and international observances
+- Religious holidays from multiple traditions
+- Health awareness and commemorative days
+
+**Complete 2026 Holiday List:**
+
+| Date | Holiday Name | Type | Description |
+|------|--------------|------|-------------|
+| 01-JAN-26 | New Year's Day | PUBLIC | First day of the year |
+| 06-JAN-26 | Epiphany | PUBLIC | Christian Feast day |
+| 19-JAN-26 | Martin Luther King Jr. Day | PUBLIC | Federal holiday in USA |
+| 14-FEB-26 | Valentine's Day | HOSPITAL | Hospital observance |
+| 16-FEB-26 | President's Day | PUBLIC | Federal holiday |
+| 17-MAR-26 | St. Patrick's Day | HOSPITAL | Hospital observance |
+| 03-APR-26 | Good Friday | PUBLIC | Christian holiday |
+| 06-APR-26 | Easter Monday | PUBLIC | Christian holiday |
+| 01-MAY-26 | Labor Day | NATIONAL | International Workers' Day |
+| 04-JUL-26 | Independence Day | NATIONAL | National Independence Day |
+| 15-AUG-26 | Assumption Day | PUBLIC | Religious holiday |
+| 01-NOV-26 | All Saints' Day | PUBLIC | Religious holiday |
+| 11-NOV-26 | Veterans Day | NATIONAL | Honors military veterans |
+| 26-NOV-26 | Thanksgiving Day | PUBLIC | Traditional holiday |
+| 25-DEC-26 | Christmas Day | PUBLIC | Christmas celebration |
+| 26-DEC-26 | Boxing Day | PUBLIC | Day after Christmas |
+| 31-DEC-26 | New Year's Eve | PUBLIC | Last day of the year |
+| 15-JUN-26 | Hospital Foundation Day | HOSPITAL | Hospital special day |
+| 07-APR-26 | National Health Day | NATIONAL | Health awareness day |
+| 12-MAY-26 | National Nurses Day | NATIONAL | Celebrating nurses |
+
+**Purpose:** These holidays will be used in Phase VII triggers to enforce business rules preventing appointments on non-working days.
+
+---
+
+#### MEDICAL_RECORDS Sample Data
+
+**SQL Query:**
+```sql
+SELECT * FROM medical_records;
+```
+
+![Medical Records Sample Data](screenshots/medicalrecords_data.PNG)
+
+**Clinical Documentation Shows:**
+- Record IDs 79-91 with complete patient-doctor linkage
+- Diverse medical specialties and diagnoses
+- Comprehensive symptom documentation
+- Detailed treatment plans
+- Test results captured with specific values
+- Follow-up dates scheduled 24-31 days in advance
+- Record dates from March-April 2026
+
+**Sample Clinical Cases:**
+
+1. **Orthopedics (Record 79)**
+   - Symptoms: Joint pain
+   - Diagnosis: Orthopedics
+   - Treatment: Physiotherapy
+   - Tests: X-ray normal
+   - Follow-up: 03-APR-26
+
+2. **Cardiology (Record 80)**
+   - Symptoms: Chest pain
+   - Diagnosis: Cardiology
+   - Treatment: Medication prescribed
+   - Tests: ECG normal
+   - Follow-up: 04-APR-26
+
+3. **Diabetes Check (Record 81)**
+   - Symptoms: Fatigue
+   - Diagnosis: Diabetes check
+   - Treatment: Insulin adjustment
+   - Tests: Blood sugar 165
+   - Follow-up: 05-APR-26
+
+4. **Preventive Care (Record 82)**
+   - Symptoms: Routine checkup
+   - Diagnosis: Preventive Care
+   - Treatment: Vitamin supplements
+   - Tests: All normal
+   - Follow-up: 06-APR-26
+
+5. **Neurology (Record 83)**
+   - Symptoms: Headache
+   - Diagnosis: Neurology
+   - Treatment: Medication prescribed
+   - Tests: MRI normal
+   - Follow-up: 07-APR-26
+
+6. **Psychiatry (Record 84)**
+   - Symptoms: Depression
+   - Diagnosis: Psychiatry
+   - Treatment: Counseling
+   - Tests: No abnormalities
+   - Follow-up: 08-APR-26
+
+7. **Gynecology (Record 85)**
+   - Symptoms: Pregnancy check
+   - Diagnosis: Gynecology
+   - Treatment: Routine monitoring
+   - Tests: Ultrasound normal
+   - Follow-up: 09-APR-26
+
+8. **Surgery Follow-up (Record 86)**
+   - Symptoms: Post-op pain
+   - Diagnosis: Surgery follow-up
+   - Treatment: Medication prescribed
+   - Tests: Healing normal
+   - Follow-up: 10-APR-26
+
+---
+
+#### PRESCRIPTIONS Sample Data
+
+**SQL Query:**
+```sql
+SELECT * FROM prescriptions;
+```
+
+![Prescriptions Sample Data](screenshots/prescriptions_data.PNG)
+
+**Medication Records Include:**
+- 14 different medications prescribed
+- Prescription IDs 1-14 linked to medical records and patients
+- Dosage specifications ranging from 5mg to 500mg
+- Frequency patterns: Once daily, Twice daily, Three times daily
+- Treatment durations from 5 to 30 days
+- Specific administration instructions
+- Prescription dates spanning 08-DEC-25 to 21-DEC-25
+
+**Complete Medication List:**
+
+| ID | Medicine | Dosage | Frequency | Duration | Instructions |
+|----|----------|--------|-----------|----------|--------------|
+| 1 | Paracetamol | 500mg | Twice a day | 5 days | After meals |
+| 2 | Ibuprofen | 400mg | Three times a day | 7 days | With water |
+| 3 | Amoxicillin | 250mg | Twice a day | 10 days | Before meals |
+| 4 | Metformin | 500mg | Once a day | 30 days | With breakfast |
+| 5 | Lisinopril | 10mg | Once a day | 30 days | Before breakfast |
+| 6 | Atorvastatin | 20mg | Once a day | 30 days | Before bed |
+| 7 | Omeprazole | 20mg | Once a day | 14 days | Before meals |
+| 8 | Amlodipine | 5mg | Once a day | 30 days | Morning |
+| 9 | Prednisone | 10mg | Twice a day | 7 days | After meals |
+| 10 | Ciprofloxacin | 500mg | Twice a day | 10 days | With water |
+| 11 | Hydrochlorothiazide | 25mg | Once a day | 30 days | Morning |
+| 12 | Levothyroxine | 50mcg | Once a day | 30 days | Empty stomach |
+| 13 | Azithromycin | 250mg | Once a day | 5 days | After meals |
+| 14 | Simvastatin | 20mg | Once a day | 30 days | Evening |
+
+**Medication Categories:**
+- Pain relief: Paracetamol, Ibuprofen
+- Antibiotics: Amoxicillin, Ciprofloxacin, Azithromycin
+- Diabetes: Metformin
+- Blood pressure: Lisinopril, Amlodipine, Hydrochlorothiazide
+- Cholesterol: Atorvastatin, Simvastatin
+- Acid reflux: Omeprazole
+- Anti-inflammatory: Prednisone
+- Thyroid: Levothyroxine
+
+---
+
+## 5.7 Data Integrity Verification
+
+### 5.7.1 Constraint Validation
 
 All CHECK constraints properly enforced.
 
@@ -791,7 +1097,7 @@ All CHECK constraints properly enforced.
 
 ---
 
-### 5.6.2 Date Validation
+### 5.7.2 Date Validation
 
 All dates are realistic and within acceptable ranges.
 
@@ -805,7 +1111,7 @@ All dates are realistic and within acceptable ranges.
 
 ---
 
-### 5.6.3 Referential Integrity
+### 5.7.3 Referential Integrity
 
 Foreign key relationships properly maintained.
 
@@ -819,7 +1125,7 @@ Foreign key relationships properly maintained.
 
 ---
 
-### 5.6.4 Unique Constraint Validation
+### 5.7.4 Unique Constraint Validation
 
 Email and phone uniqueness properly enforced.
 
@@ -832,16 +1138,16 @@ Email and phone uniqueness properly enforced.
 
 ---
 
-## 5.7 Testing Queries
+## 5.8 Testing Queries
 
-### 5.7.1 Basic Retrieval Queries
+### 5.8.1 Basic Retrieval Queries
 
 ![Active Doctors Query](screenshots/active.PNG)
 
 Sample active doctors showing complete profile information including specialization, contact details, and consultation fees.
 
 ---
-### 5.7.2 Temporal Analysis - Monthly Appointment Trends
+### 5.8.2 Temporal Analysis - Monthly Appointment Trends
 
 ![Monthly Appointment Trends](screenshots/scheduled.PNG)
 
@@ -855,7 +1161,7 @@ Sample active doctors showing complete profile information including specializat
 
 ---
 
-### 5.7.3 Multi-Table JOIN Queries
+### 5.8.3 Multi-Table JOIN Queries
 
 Complex aggregation query
 
@@ -874,7 +1180,7 @@ Complex aggregation query
 
 
 ### Aggregations Queries
-### 5.7.4 Prescription Analytics
+### 5.8.4 Prescription Analytics
 
 ![Prescription Analytics](screenshots/aggregation4.PNG)
 
@@ -890,7 +1196,7 @@ Complex aggregation query
 
 ---
 ### Subquerry
-### 5.7.5 Department Workload Distribution
+### 5.8.5 Department Workload Distribution
 
 ![Department Workload](screenshots/subquerry3.PNG)
 
@@ -906,7 +1212,7 @@ Complex aggregation query
 
 ---
 
-### 5.7.6 Top Revenue Generators
+### 5.8.6 Top Revenue Generators
 
 ![Top Revenue Doctors](screenshots/subquerry5.PNG)
 

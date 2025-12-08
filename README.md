@@ -605,7 +605,7 @@ ADMIN USER celine_admin IDENTIFIED BY celine
 FILE_NAME_CONVERT = ('pdbseed', 'wed_27400_celine_HospitalAppOpt_db');
 ```
 
-![PDB Creation](screenshots/create.PNG)
+![PDB Creation](screenshots/Create.PNG)
 *CREATE PLUGGABLE DATABASE command execution*
 
 **SQL Command:**

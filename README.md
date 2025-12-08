@@ -843,7 +843,7 @@ Sample active doctors showing complete profile information including specializat
 ---
 ### 5.7.2 Temporal Analysis - Monthly Appointment Trends
 
-![Monthly Appointment Trends](screenshots/schedule.PNG)
+![Monthly Appointment Trends](screenshots/scheduled.PNG)
 
 **Analysis:** Appointment distribution across December 2025 to April 2026.
 

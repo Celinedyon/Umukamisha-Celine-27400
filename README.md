@@ -466,13 +466,8 @@ The Healthcare Management System consists of **10 core entities**:
 # Phase IV: Database Creation
 
 ---
-
-# Phase IV: Database Creation
-
-**Student:** Umukamisha Celine  
-**ID:** 27400  
+ 
 **Database:** wed_27400_celine_HospitalAppOpt_db  
-**Date:** December 7, 2025
 
 ---
 

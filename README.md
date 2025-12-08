@@ -1225,6 +1225,625 @@ Complex aggregation query
 
 ---
 
+# Phase VI: Database Interaction & Transactions
+
+---
+
+## Overview
+This phase implements PL/SQL procedures, functions, packages, cursors, and window functions for the Healthcare Management System database.
+---
+## 1. FUNCTIONS
+
+### 1.1 Get Total Appointments Count
+
+**Purpose:** Count total appointments for a specific doctor within a date range.
+
+**Script:**
+
+```sql
+CREATE OR REPLACE FUNCTION get_total_appointments_count(
+    p_doctor_id IN NUMBER,
+    p_start_date IN DATE,
+    p_end_date IN DATE
+) RETURN NUMBER
+IS
+    v_count NUMBER;
+BEGIN
+    SELECT COUNT(*)
+    INTO v_count
+    FROM appointments
+    WHERE doctor_id = p_doctor_id
+    AND appointment_date BETWEEN p_start_date AND p_end_date;
+    
+    RETURN v_count;
+    
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RETURN 0;
+    WHEN OTHERS THEN
+        RAISE_APPLICATION_ERROR(-20999, 'Error counting appointments: ' || SQLERRM);
+END get_total_appointments_count;
+/
+```
+
+**Screenshot:**
+
+![Function get_total_appointments_count](screenshots/function3.PNG)
+
+*Shows function creation with parameters p_doctor_id (NUMBER), p_start_date (DATE), p_end_date (DATE) returning NUMBER. Exception handling includes NO_DATA_FOUND and OTHERS. Function created successfully.*
+
+---
+
+### 1.2 Calculate Patient Age
+
+**Purpose:** Calculate patient's current age from their date of birth.
+
+**Script:**
+
+```sql
+CREATE OR REPLACE FUNCTION calculate_patient_age(
+    p_patient_id IN NUMBER
+) RETURN NUMBER
+IS
+    v_dob DATE;
+    v_age NUMBER;
+BEGIN
+    -- Fetch patient date of birth
+    SELECT date_of_birth INTO v_dob
+    FROM patients
+    WHERE patient_id = p_patient_id;
+    
+    -- Calculate age
+    v_age := FLOOR(MONTHS_BETWEEN(SYSDATE, v_dob) / 12);
+    
+    RETURN v_age;
+    
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RAISE_APPLICATION_ERROR(-20001, 'Patient not found with ID: ' || p_patient_id);
+    WHEN OTHERS THEN
+        RAISE_APPLICATION_ERROR(-20999, 'Error calculating age: ' || SQLERRM);
+END calculate_patient_age;
+/
+```
+
+**Screenshot:**
+
+![Function calculate_patient_age](screenshots/functioncreated.PNG)
+
+*Shows function with age calculation using MONTHS_BETWEEN(SYSDATE, v_dob) divided by 12 and FLOOR for integer result. Includes exception handling for NO_DATA_FOUND with custom error message. Function created successfully.*
+
+---
+
+### 1.3 Get Patient Full Name
+
+**Purpose:** Retrieve patient's complete name as a single formatted string.
+
+**Script:**
+
+```sql
+CREATE OR REPLACE FUNCTION get_patient_fullname(
+    p_patient_id IN NUMBER
+) RETURN VARCHAR2
+IS
+    v_fullname VARCHAR2(200);
+BEGIN
+    SELECT first_name || ' ' || last_name
+    INTO v_fullname
+    FROM patients
+    WHERE patient_id = p_patient_id;
+    
+    RETURN v_fullname;
+    
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RAISE_APPLICATION_ERROR(-20001, 'Patient not found');
+    WHEN OTHERS THEN
+        RAISE_APPLICATION_ERROR(-20999, 'Error: ' || SQLERRM);
+END get_patient_fullname;
+/
+```
+
+**Screenshot:**
+
+![Function get_patient_fullname](screenshots/function1.png)
+
+*Shows function concatenating first_name and last_name with space separator. Returns VARCHAR2(200). Exception handling for missing patient records. Function created successfully.*
+
+---
+
+## 2. PACKAGES
+
+### 2.1 Exception Package
+
+**Purpose:** Centralized custom exception handling for the entire application.
+
+**Script:**
+
+```sql
+CREATE OR REPLACE PACKAGE exception_pkg AS
+    -- Custom exception declarations
+    patient_not_found EXCEPTION;
+    doctor_not_found EXCEPTION;
+    appointment_not_found EXCEPTION;
+    invalid_appointment_time EXCEPTION;
+    doctor_not_available EXCEPTION;
+    duplicate_appointment EXCEPTION;
+    invalid_status EXCEPTION;
+    
+    -- Exception error codes
+    PRAGMA EXCEPTION_INIT(patient_not_found, -20001);
+    PRAGMA EXCEPTION_INIT(doctor_not_found, -20002);
+    PRAGMA EXCEPTION_INIT(appointment_not_found, -20003);
+    PRAGMA EXCEPTION_INIT(invalid_appointment_time, -20004);
+    PRAGMA EXCEPTION_INIT(doctor_not_available, -20005);
+    PRAGMA EXCEPTION_INIT(duplicate_appointment, -20006);
+    PRAGMA EXCEPTION_INIT(invalid_status, -20007);
+END exception_pkg;
+/
+```
+
+**Screenshot:**
+
+![Package exception_pkg](screenshots/packagecreated.PNG)
+
+*Shows custom exception declarations for 7 different business scenarios (patient_not_found, doctor_not_found, appointment_not_found, invalid_appointment_time, doctor_not_available, duplicate_appointment, invalid_status). Each exception mapped to unique error code using PRAGMA EXCEPTION_INIT. Package created successfully.*
+
+---
+
+## 3. PROCEDURES
+
+### 3.1 Add New Patient
+
+**Purpose:** Register new patients with comprehensive data validation and OUT parameters.
+
+**Script:**
+
+```sql
+CREATE OR REPLACE PROCEDURE add_new_patient(
+    p_first_name IN VARCHAR2,
+    p_last_name IN VARCHAR2,
+    p_dob IN DATE,
+    p_gender IN VARCHAR2,
+    p_phone IN VARCHAR2,
+    p_email IN VARCHAR2,
+    p_address IN VARCHAR2,
+    p_blood_group IN VARCHAR2,
+    p_emergency_contact IN VARCHAR2,
+    p_patient_id OUT NUMBER,
+    p_message OUT VARCHAR2
+) IS
+BEGIN
+    -- Insert new patient (sequence/trigger handles patient_id)
+    INSERT INTO patients(
+        first_name, last_name, date_of_birth, gender,
+        phone, email, address, blood_group, emergency_contact
+    ) VALUES (
+        p_first_name, p_last_name, p_dob, p_gender,
+        p_phone, p_email, p_address, p_blood_group, p_emergency_contact
+    )
+    RETURNING patient_id INTO p_patient_id;
+    
+    COMMIT;
+    p_message := 'Patient registered successfully with ID: ' || p_patient_id;
+    
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        p_message := 'Error: ' || SQLERRM;
+        RAISE_APPLICATION_ERROR(-20999, 'Error adding patient: ' || SQLERRM);
+END add_new_patient;
+/
+```
+
+**Test Execution:**
+
+```sql
+SET SERVEROUTPUT ON;
+DECLARE
+    v_patient_id NUMBER;
+    v_message VARCHAR2(200);
+BEGIN
+    add_new_patient(
+        p_first_name => 'Alice',
+        p_last_name => 'Johnson',
+        p_dob => TO_DATE('05-MAY-1990','DD-MON-YYYY'),
+        p_gender => 'FEMALE',
+        p_phone => '0783000103',
+        p_email => 'alice.johnson@email.com',
+        p_address => 'Kigali',
+        p_blood_group => 'A+',
+        p_emergency_contact => '0782000103',
+        p_patient_id => v_patient_id,
+        p_message => v_message
+    );
+END;
+/
+```
+
+**Screenshot:**
+
+![Procedure add_new_patient test](screenshots/procedure1testing.PNG)
+
+*Shows successful patient registration with Alice Johnson details. Message displays "Patient registered successfully with ID: 103". Demonstrates IN parameters (9 patient details), OUT parameters (patient_id, message), RETURNING clause, and exception handling with ROLLBACK. PL/SQL procedure successfully completed.*
+
+---
+
+### 3.2 Archive Old Appointments (WITH EXPLICIT CURSOR)
+
+**Purpose:** Archive completed appointments older than cutoff date using explicit cursor for multi-row processing.
+
+**Script:**
+
+```sql
+CREATE OR REPLACE PROCEDURE archive_old_appointments(
+    p_cutoff_date IN DATE,
+    p_archived_count OUT NUMBER
+) IS
+    -- EXPLICIT CURSOR for multi-row processing
+    CURSOR c_old_appointments IS
+        SELECT *
+        FROM appointments
+        WHERE appointment_date < p_cutoff_date
+        AND status = 'COMPLETED';
+        
+    v_count NUMBER := 0;
+BEGIN
+    -- Loop through cursor
+    FOR rec IN c_old_appointments LOOP
+        -- Move to archive table
+        INSERT INTO appointments_archive
+        SELECT a.*, SYSDATE as archived_date
+        FROM appointments a
+        WHERE appointment_id = rec.appointment_id;
+        
+        -- Delete from main table
+        DELETE FROM appointments
+        WHERE appointment_id = rec.appointment_id;
+        
+        v_count := v_count + 1;
+    END LOOP;
+    
+    COMMIT;
+    p_archived_count := v_count;
+    
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE_APPLICATION_ERROR(-20999, 'Error archiving: ' || SQLERRM);
+END archive_old_appointments;
+/
+```
+
+**Test Execution 1:**
+
+```sql
+SET SERVEROUTPUT ON;
+DECLARE
+    v_count NUMBER;
+BEGIN
+    DBMS_OUTPUT.PUT_LINE('=== Archive Old Appointments Test ===');
+    
+    -- Archive all appointments before Jan 1, 2025
+    archive_old_appointments(
+        p_cutoff_date => DATE '2025-01-01',
+        p_archived_count => v_count
+    );
+    
+    DBMS_OUTPUT.PUT_LINE('Archived: ' || v_count || ' appointments');
+    
+    -- Show breakdown
+    DBMS_OUTPUT.PUT_LINE('--- Current Appointments ---');
+    FOR rec IN (SELECT status, COUNT(*) cnt FROM appointments GROUP BY status) LOOP
+        DBMS_OUTPUT.PUT_LINE(rec.status || ': ' || rec.cnt);
+    END LOOP;
+    
+    DBMS_OUTPUT.PUT_LINE('--- Archived Appointments ---');
+    FOR rec IN (SELECT status, COUNT(*) cnt FROM appointments_archive GROUP BY status) LOOP
+        DBMS_OUTPUT.PUT_LINE(rec.status || ': ' || rec.cnt);
+    END LOOP;
+END;
+/
+```
+
+**Screenshot 1:**
+
+![Archive procedure execution](screenshots/7.PNG)
+
+*Shows test with cutoff date 2025-01-01. Output displays "Archived: 0 appointments", "--- Current Appointments ---" showing SCHEDULED: 103, "--- Archived Appointments ---" showing COMPLETED: 2. Demonstrates explicit cursor loop, FOR loop iteration, INSERT into archive table, DELETE from main table, and OUT parameter usage.*
+
+---
+
+**Verification Query:**
+
+```sql
+-- Check appointments table
+SELECT 'Appointments Table' as table_name, status, COUNT(*) as count
+FROM appointments
+GROUP BY status
+UNION ALL
+-- Check archive table
+SELECT 'Archive Table' as table_name, status, COUNT(*) as count
+FROM appointments_archive
+GROUP BY status;
+```
+
+**Screenshot 2:**
+
+![Archive verification](screenshots/6.PNG)
+
+*Shows UNION ALL query comparing two tables. Results display "Appointments Table" with SCHEDULED: 103 and "Archive Table" with COMPLETED: 2. Confirms successful archival process and data moved to archive table.*
+
+---
+
+**Test Execution 2:**
+
+```sql
+DECLARE
+    v_count NUMBER;
+BEGIN
+    archive_old_appointments(
+        p_cutoff_date => ADD_MONTHS(SYSDATE, -6),
+        p_archived_count => v_count
+    );
+    DBMS_OUTPUT.PUT_LINE('Archived count: ' || v_count);
+END;
+/
+```
+
+**Screenshot 3:**
+
+![Archive count test](screenshots/testing0.PNG)
+
+*Shows test with 6-month cutoff date using ADD_MONTHS(SYSDATE, -6). Output: "Archived count: 0" indicating no appointments older than 6 months exist. PL/SQL procedure successfully completed.*
+
+---
+
+**Status Verification:**
+
+```sql
+-- Verify the results
+SELECT status, COUNT(*) 
+FROM appointments 
+GROUP BY status;
+```
+
+**Screenshot 4:**
+
+![Verify status](screenshots/testing0.PNG)
+
+*Shows final status check with two columns: STATUS and COUNT(*). Results display SCHEDULED with count 102. Confirms all active appointments remain in main table after archival process.*
+
+---
+
+## 4. WINDOW FUNCTIONS
+
+### 4.1 Patient Appointment History with LAG/LEAD
+
+**Purpose:** Analyze patient appointment patterns using LAG and LEAD window functions to show previous and next appointments.
+
+**Query:**
+
+```sql
+SELECT 
+    patient_id,
+    appointment_date,
+    doctor_id,
+    LAG(appointment_date) OVER (PARTITION BY patient_id ORDER BY appointment_date) as previous_appointment,
+    LEAD(appointment_date) OVER (PARTITION BY patient_id ORDER BY appointment_date) as next_appointment,
+    appointment_date - LAG(appointment_date) OVER (PARTITION BY patient_id ORDER BY appointment_date) as days_since_last
+FROM appointments
+WHERE status = 'COMPLETED'
+ORDER BY patient_id, appointment_date;
+```
+
+**Screenshot:**
+
+![Window functions LAG/LEAD](screenshots/2.PNG)
+
+*Shows SQL query with LAG and LEAD window functions using PARTITION BY patient_id and ORDER BY appointment_date. Query calculates previous_appointment, next_appointment, and days_since_last for each patient. Result shows "no rows selected" because WHERE status = 'COMPLETED' filters out all current SCHEDULED appointments. Demonstrates proper window function syntax with PARTITION BY and ORDER BY clauses.*
+
+---
+
+### 4.2 Monthly Appointment Trends with Cumulative Totals
+
+**Purpose:** Track appointment volume trends with moving averages using window aggregation functions.
+
+**Query:**
+
+```sql
+SELECT 
+    TO_CHAR(appointment_date, 'YYYY-MM') as month,
+    COUNT(*) as monthly_count,
+    SUM(COUNT(*)) OVER (ORDER BY TO_CHAR(appointment_date, 'YYYY-MM')) as cumulative_total,
+    AVG(COUNT(*)) OVER (ORDER BY TO_CHAR(appointment_date, 'YYYY-MM') 
+                        ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) as moving_avg_3months
+FROM appointments
+GROUP BY TO_CHAR(appointment_date, 'YYYY-MM')
+ORDER BY month;
+```
+
+**Screenshot:**
+
+![Monthly trends with window functions](screenshots/3.PNG)
+
+*Shows query results with four columns: MONTH, MONTHLY_COUNT, CUMULATIVE_TOTAL, MOVING_AVG_3MONTHS. Data spans from 2025-12 to 2026-04. December 2025: 24 appointments (cumulative 24, moving avg 24). January 2026: 31 appointments (cumulative 55, moving avg 27.5). February 2026: 28 appointments (cumulative 83, moving avg 27.666667). March 2026: 17 appointments (cumulative 100, moving avg 25.333333). April 2026: 2 appointments (cumulative 102, moving avg 15.666667). Demonstrates SUM OVER for cumulative totals and AVG OVER with ROWS BETWEEN for 3-month moving averages.*
+
+---
+
+### 4.3 Doctor Rankings by Appointment Count
+
+**Purpose:** Rank doctors by workload using RANK, DENSE_RANK, and ROW_NUMBER window functions.
+
+**Query:**
+
+```sql
+SELECT 
+    doctor_id,
+    doctor_name,
+    appointment_count,
+    RANK() OVER (ORDER BY appointment_count DESC) as rank,
+    DENSE_RANK() OVER (ORDER BY appointment_count DESC) as dense_rank,
+    ROW_NUMBER() OVER (ORDER BY appointment_count DESC) as row_num
+FROM (
+    SELECT 
+        d.doctor_id,
+        d.first_name || ' ' || d.last_name as doctor_name,
+        COUNT(a.appointment_id) as appointment_count
+    FROM doctors d
+    LEFT JOIN appointments a ON d.doctor_id = a.doctor_id
+    GROUP BY d.doctor_id, d.first_name, d.last_name
+);
+```
+
+**Screenshot:**
+
+![Doctor rankings with RANK, DENSE_RANK, ROW_NUMBER](screenshots/4.PNG)
+
+*Shows complete ranking results for all doctors with three ranking columns. Results display DOCTOR_ID, DOCTOR_NAME, APPOINTMENT_COUNT, RANK, DENSE_RANK, and ROW_NUM. Top doctors include: Anna Kowalski (4 appointments, rank 1), Michael Chen (4 appointments, rank 1), Sarah Johnson (4 appointments, rank 1), John Smith (4 appointments, rank 1), James Anderson (4 appointments, rank 1), and many more with decreasing counts. Demonstrates difference between RANK (ties get same rank, gaps in sequence), DENSE_RANK (ties get same rank, no gaps), and ROW_NUMBER (unique sequential numbers). Shows 15+ doctors listed.*
+
+---
+
+### 4.4 Top 5 Doctors - Simplified Window Function
+
+**Purpose:** Demonstrate simplified window function query focusing on top performers.
+
+**Query:**
+
+```sql
+SELECT * FROM (
+    SELECT 
+        doctor_id,
+        COUNT(*) as total_appointments,
+        RANK() OVER (ORDER BY COUNT(*) DESC) as rank
+    FROM appointments
+    GROUP BY doctor_id
+)
+WHERE ROWNUM <= 5;
+```
+
+**Screenshot:**
+
+![Top 5 doctors simplified](screenshots/5.PNG)
+
+*Shows simplified query result with three columns: DOCTOR_ID, TOTAL_APPOINTMENTS, and RANK. Results show top 5 doctors: Doctor 1 (4 appointments, rank 2), Doctor 5 (4 appointments, rank 2), Doctor 2 (4 appointments, rank 2), Doctor 13 (4 appointments, rank 2), Doctor 6 (4 appointments, rank 2). All have same appointment count demonstrating RANK function behavior with ties. Uses ROWNUM <= 5 to limit output. Demonstrates window function with simple aggregation and ranking.*
+
+---
+
+## Testing Scripts
+
+
+**Script:** `05_test_all.sql`
+
+```sql
+SET SERVEROUTPUT ON;
+
+-- Test 1: Functions
+PROMPT 
+PROMPT === TEST 1: Get Total Appointments Count ===
+DECLARE
+    v_count NUMBER;
+BEGIN
+    v_count := get_total_appointments_count(
+        p_doctor_id => 1,
+        p_start_date => DATE '2025-01-01',
+        p_end_date => DATE '2025-12-31'
+    );
+    DBMS_OUTPUT.PUT_LINE('Total appointments: ' || v_count);
+END;
+/
+
+PROMPT 
+PROMPT === TEST 2: Calculate Patient Age ===
+DECLARE
+    v_age NUMBER;
+BEGIN
+    v_age := calculate_patient_age(103);
+    DBMS_OUTPUT.PUT_LINE('Patient age: ' || v_age || ' years');
+END;
+/
+
+PROMPT 
+PROMPT === TEST 3: Get Patient Full Name ===
+DECLARE
+    v_name VARCHAR2(200);
+BEGIN
+    v_name := get_patient_fullname(103);
+    DBMS_OUTPUT.PUT_LINE('Patient name: ' || v_name);
+END;
+/
+
+-- Test 2: Add New Patient Procedure
+PROMPT 
+PROMPT === TEST 4: Add New Patient ===
+DECLARE
+    v_patient_id NUMBER;
+    v_message VARCHAR2(200);
+BEGIN
+    add_new_patient(
+        p_first_name => 'John',
+        p_last_name => 'Doe',
+        p_dob => TO_DATE('15-JAN-1985', 'DD-MON-YYYY'),
+        p_gender => 'MALE',
+        p_phone => '0788123456',
+        p_email => 'john.doe@email.com',
+        p_address => 'Kigali',
+        p_blood_group => 'O+',
+        p_emergency_contact => '0788654321',
+        p_patient_id => v_patient_id,
+        p_message => v_message
+    );
+    DBMS_OUTPUT.PUT_LINE(v_message);
+END;
+/
+
+-- Test 3: Archive Old Appointments
+PROMPT 
+PROMPT === TEST 5: Archive Old Appointments ===
+DECLARE
+    v_count NUMBER;
+BEGIN
+    archive_old_appointments(
+        p_cutoff_date => ADD_MONTHS(SYSDATE, -6),
+        p_archived_count => v_count
+    );
+    DBMS_OUTPUT.PUT_LINE('Archived: ' || v_count || ' appointments');
+    
+    -- Show breakdown
+    FOR rec IN (SELECT status, COUNT(*) cnt FROM appointments GROUP BY status) LOOP
+        DBMS_OUTPUT.PUT_LINE('Current - ' || rec.status || ': ' || rec.cnt);
+    END LOOP;
+    
+    FOR rec IN (SELECT status, COUNT(*) cnt FROM appointments_archive GROUP BY status) LOOP
+        DBMS_OUTPUT.PUT_LINE('Archive - ' || rec.status || ': ' || rec.cnt);
+    END LOOP;
+END;
+/
+
+-- Test 4: Window Functions
+PROMPT 
+PROMPT === TEST 6: Window Functions - Doctor Rankings ===
+SELECT * FROM (
+    SELECT 
+        doctor_id,
+        COUNT(*) as total_appointments,
+        RANK() OVER (ORDER BY COUNT(*) DESC) as rank
+    FROM appointments
+    GROUP BY doctor_id
+)
+WHERE ROWNUM <= 5;
+
+PROMPT 
+PROMPT === TEST 7: Window Functions - Monthly Trends ===
+SELECT 
+    TO_CHAR(appointment_date, 'YYYY-MM') as month,
+    COUNT(*) as monthly_count,
+    SUM(COUNT(*)) OVER (ORDER BY TO_CHAR(appointment_date, 'YYYY-MM')) as cumulative_total
+FROM appointments
+GROUP BY TO_CHAR(appointment_date, 'YYYY-MM')
+ORDER BY month;
+
+```
 
 
 **Course:** Database Development with PL/SQL (INSY 8311)  

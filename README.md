@@ -1346,7 +1346,7 @@ END get_patient_fullname;
 
 **Screenshot:**
 
-![Function get_patient_fullname](screenshots/function1.png)
+![Function get_patient_fullname](screenshots/function1.PNG)
 
 *Shows function concatenating first_name and last_name with space separator. Returns VARCHAR2(200). Exception handling for missing patient records. Function created successfully.*
 

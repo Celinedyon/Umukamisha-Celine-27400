@@ -787,7 +787,7 @@ Realistic test data successfully inserted across all tables. Below are sample re
 SELECT * FROM appointments;
 ```
 
-![Appointments Sample Data](screenshots/appointments_data.PNG)
+![Appointments Sample Data](screenshots/appointments.PNG)
 
 **Sample Records Show:**
 - Appointment IDs 1-12 with scheduled dates (December 2025)
@@ -806,7 +806,7 @@ SELECT * FROM appointments;
 SELECT * FROM audit_log;
 ```
 
-![Audit Log Sample Data](screenshots/auditlog_data.PNG)
+![Audit Log Sample Data](screenshots/auditlog.PNG)
 
 **Audit Trail Demonstrates:**
 - Complete DML operation tracking (INSERT, UPDATE)
@@ -838,7 +838,7 @@ SELECT * FROM audit_log;
 SELECT * FROM doctors;
 ```
 
-![Doctors Sample Data](screenshots/doctors_data.PNG)
+![Doctors Sample Data](screenshots/doctors.PNG)
 
 **Doctor Records Include:**
 - 24 doctors with diverse specializations
@@ -883,7 +883,7 @@ SELECT * FROM doctors;
 SELECT * FROM doctor_schedule;
 ```
 
-![Doctor Schedule Sample Data](screenshots/schedule_data.PNG)
+![Doctor Schedule Sample Data](screenshots/doctorschedule.PNG)
 
 **Schedule Patterns Show:**
 - 20 schedule entries covering different doctors and days
@@ -916,7 +916,7 @@ SELECT * FROM doctor_schedule;
 SELECT * FROM holidays;
 ```
 
-![Holidays Sample Data](screenshots/holidays_data.PNG)
+![Holidays Sample Data](screenshots/holidays.PNG)
 
 **Holiday Calendar Includes:**
 - 20 holidays spanning entire 2026 calendar year
@@ -961,7 +961,7 @@ SELECT * FROM holidays;
 SELECT * FROM medical_records;
 ```
 
-![Medical Records Sample Data](screenshots/medicalrecords_data.PNG)
+![Medical Records Sample Data](screenshots/medical.PNG)
 
 **Clinical Documentation Shows:**
 - Record IDs 79-91 with complete patient-doctor linkage
@@ -1039,7 +1039,7 @@ SELECT * FROM medical_records;
 SELECT * FROM prescriptions;
 ```
 
-![Prescriptions Sample Data](screenshots/prescriptions_data.PNG)
+![Prescriptions Sample Data](screenshots/prescriptions.PNG)
 
 **Medication Records Include:**
 - 14 different medications prescribed

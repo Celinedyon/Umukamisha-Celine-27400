@@ -781,13 +781,13 @@ Comprehensive dataset inserted across all tables meeting phase requirements.
 
 All CHECK constraints properly enforced.
 
-![Constraint Validation](screenshots/constraint_validation.PNG)
+![Constraint Validation](screenshots/constraintvalidation.PNG)
 
 **Verified Constraints:**
-- ✅ Appointment status: Only 'SCHEDULED' exists (pre-testing state)
-- ✅ Payment status: CANCELLED, PAID, PENDING (valid states)
-- ✅ Doctor status: ACTIVE, INACTIVE, ON_LEAVE (valid states)
-- ✅ Patient gender: FEMALE, MALE (valid values)
+- Appointment status: Only 'SCHEDULED' exists (pre-testing state)
+- Payment status: CANCELLED, PAID, PENDING (valid states)
+- Doctor status: ACTIVE, INACTIVE, ON_LEAVE (valid states)
+- Patient gender: FEMALE, MALE (valid values)
 
 ---
 
@@ -795,13 +795,13 @@ All CHECK constraints properly enforced.
 
 All dates are realistic and within acceptable ranges.
 
-![Date Validation](screenshots/date_validation.PNG)
+![Date Validation](screenshots/dateconsistency.PNG)
 
 **Date Checks:**
-- ✅ No future birth dates (0 invalid records)
-- ✅ No future hire dates (1 expected test case)
-- ✅ No invalid consultation fees (0 records ≤ 0)
-- ✅ No invalid billing amounts (0 records ≤ 0)
+- No future birth dates (0 invalid records)
+- No future hire dates (1 expected test case)
+- No invalid consultation fees (0 records ≤ 0)
+- No invalid billing amounts (0 records ≤ 0)
 
 ---
 
@@ -809,7 +809,7 @@ All dates are realistic and within acceptable ranges.
 
 Foreign key relationships properly maintained.
 
-![Referential Integrity](screenshots/referential_integrity.PNG)
+![Referential Integrity](screenshots/relationshipcardinality.PNG)
 
 **Relationship Tests:**
 - 70 patients without appointments (realistic for new registrations)
@@ -823,43 +823,27 @@ Foreign key relationships properly maintained.
 
 Email and phone uniqueness properly enforced.
 
-![Unique Constraint Validation](screenshots/unique_validation.PNG)
+![Unique Constraint Validation](screenshots/uniqueconstraints.PNG)
 
 **Uniqueness Verified:**
-- ✅ No duplicate patient emails
-- ✅ No duplicate doctor emails
-- ✅ Each email appears exactly once
+- No duplicate patient emails
+- No duplicate doctor emails
+- Each email appears exactly once
 
 ---
 
 ## 5.7 Testing Queries
 
-### 5.7.1 Basic Retrieval - Active Doctors
+### 5.7.1 Basic Retrieval Queries
 
-![Active Doctors Query](screenshots/active_doctors.PNG)
+![Active Doctors Query](screenshots/active.PNG)
 
 Sample active doctors showing complete profile information including specialization, contact details, and consultation fees.
 
 ---
+### 5.7.2 Temporal Analysis - Monthly Appointment Trends
 
-### 5.7.2 Multi-Table JOIN - Doctor Analytics
-
-Complex aggregation query joining doctors, appointments, and billing tables.
-
-![Doctor Revenue Analytics](screenshots/doctor_revenue.PNG)
-
-**Query Purpose:** Calculate total appointments, completed visits, revenue, and average revenue per doctor.
-
-**Key Insights:**
-- Top revenue generator: Sarah Johnson (Interventional Cardiology) - $1,265
-- All doctors have 4 appointments each (even distribution for testing)
-- Revenue varies by specialization and consultation fees
-
----
-
-### 5.7.3 Temporal Analysis - Monthly Appointment Trends
-
-![Monthly Appointment Trends](screenshots/monthly_trends.PNG)
+![Monthly Appointment Trends](screenshots/schedule.PNG)
 
 **Analysis:** Appointment distribution across December 2025 to April 2026.
 
@@ -871,9 +855,28 @@ Complex aggregation query joining doctors, appointments, and billing tables.
 
 ---
 
+### 5.7.3 Multi-Table JOIN Queries
+
+Complex aggregation query
+
+![Patient Care Tracking Query](screenshots/join3.PNG)
+
+**Query Purpose:** Track complete patient journey from appointment to diagnosis, treatment, and billing.
+
+**Tables Joined:**
+- PATIENTS (patient demographics)
+- APPOINTMENTS (scheduling information)
+- DOCTORS (treating physician)
+- MEDICAL_RECORDS (diagnosis and treatment)
+- BILLING (financial transactions)
+
+**Query Complexity:** 4-table LEFT JOIN with date filtering (December 2025 onwards)
+
+
+### Aggregations Queries
 ### 5.7.4 Prescription Analytics
 
-![Prescription Analytics](screenshots/prescription_analytics.PNG)
+![Prescription Analytics](screenshots/aggregation4.PNG)
 
 **Medication Usage Analysis:**
 - 8 different medications tracked
@@ -886,89 +889,10 @@ Complex aggregation query joining doctors, appointments, and billing tables.
 - Atorvastatin, Levothyroxine, Gabapentin, Metformin
 
 ---
+### Subquerry
+### 5.7.5 Department Workload Distribution
 
-### 5.7.5 Patient Appointment Schedule
-
-![Patient Upcoming Appointments](screenshots/patient_schedule.PNG)
-
-**Query Purpose:** Show scheduled appointments with patient and doctor details.
-
-**Sample Data Shows:**
-- Patient names and contact information
-- Appointment dates and times
-- Assigned doctor names and specializations
-- All appointments currently in 'SCHEDULED' status
-
----
-
-### 5.7.6 Doctor Availability & Schedules
-
-![Doctor Schedules](screenshots/doctor_schedules.PNG)
-
-**Schedule Information:**
-- Doctor names with specializations
-- Department assignments
-- Day-wise availability
-- Shift start and end times
-- Maximum appointments per day
-
-**Pattern Observed:** Diverse specializations across multiple departments with varying schedule patterns.
-
----
-
-### 5.7.7 Patient-Prescription Relationships
-
-![Patient Prescriptions](screenshots/patient_prescriptions.PNG)
-
-**Query Details:** Three-table join (prescriptions → medical_records → patients, doctors)
-
-**Data Shows:**
-- Patient names receiving prescriptions
-- Prescribing doctor names
-- Medicine details (name, dosage, frequency, duration)
-- Prescribed dates
-
----
-
-### 5.7.8 Appointment Details with Context
-
-![Appointment Full Details](screenshots/appointment_details.PNG)
-
-**Comprehensive View:**
-- Appointment IDs and dates
-- Patient details
-- Doctor assignments
-- Consultation reasons
-- Current status
-
-**Sample Reasons:**
-- Sports Medicine Consultation
-- Spine Surgery Check
-- Pediatrics Follow-up
-- Pediatric Cardiology Check
-- Cosmetic Dermatology Follow-up
-
----
-
-### 5.7.9 Consultation Fee Analysis
-
-![Consultation Fee Analysis](screenshots/consultation_fees.PNG)
-
-**Above-Average Fee Analysis:**
-- Neurosurgery specialists charge highest fees (350)
-- Multiple specializations above average
-- Fee range: 290-350 for premium specializations
-
-**Specializations Analyzed:**
-- Neurosurgery, Spine Surgery, Cardiac Surgery
-- Trauma Surgery, Emergency Medicine, Oncology
-- Cardiac Surgery, Laparoscopic Surgery
-
----
-
-### 5.7.10 Department Workload Distribution
-
-![Department Workload](screenshots/active.PNG)
+![Department Workload](screenshots/subquerry3.PNG)
 
 **Active Doctor Count by Department:**
 - Cardiology: 16 active doctors (highest)
@@ -982,9 +906,9 @@ Complex aggregation query joining doctors, appointments, and billing tables.
 
 ---
 
-### 5.7.12 Top Revenue Generators
+### 5.7.6 Top Revenue Generators
 
-![Top Revenue Doctors](screenshots/paid.PNG)
+![Top Revenue Doctors](screenshots/subquerry5.PNG)
 
 **Top 5 Doctors by Revenue (Paid Bills Only):**
 1. Thomas Brown - Spine Surgery: $1,250

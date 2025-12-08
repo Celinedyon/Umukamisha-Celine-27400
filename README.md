@@ -701,13 +701,13 @@ All 10 core entities successfully implemented with proper constraints, indexes, 
 ![Medical Records Table Creation](screenshots/medicalrecords.PNG)
 
 #### PRESCRIPTIONS Table
-![Prescriptions Table Creation](screenshots/prescriptions.PNG)
+![Prescriptions Table Creation](screenshots/prescription.PNG)
 
 #### BILLING Table
 ![Billing Table Creation](screenshots/billing.PNG)
 
 #### HOLIDAYS Table
-![Holidays Table Creation](screenshots/holidays.PNG)
+![Holidays Table Creation](screenshots/holiday.PNG)
 
 #### AUDIT_LOG Table
 ![Audit Log Table Creation](screenshots/auditlog.PNG)

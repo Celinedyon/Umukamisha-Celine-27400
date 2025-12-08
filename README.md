@@ -645,6 +645,356 @@ WHERE username = 'CELINE_ADMIN';
 ![Verify Admin User](screenshots/verifyadminuser.PNG)
 
 ---
+# Phase 5: Table Implementation & Data Insertion
+
+---
+
+## Overview
+
+**Objective:** Build physical database structure with realistic test data and comprehensive validation.
+
+---
+
+## 5.1 Table Creation Summary
+
+All 10 core entities successfully implemented with proper constraints, indexes, and foreign key relationships.
+
+### Tables Created
+1. **DEPARTMENTS** - Hospital organizational units
+2. **DOCTORS** - Medical practitioners with specializations
+3. **PATIENTS** - Healthcare service recipients
+4. **APPOINTMENTS** - Scheduled patient-doctor meetings
+5. **DOCTOR_SCHEDULE** - Doctor availability patterns
+6. **MEDICAL_RECORDS** - Clinical documentation
+7. **PRESCRIPTIONS** - Medication orders
+8. **BILLING** - Financial transactions
+9. **HOLIDAYS** - Non-working days calendar
+10. **AUDIT_LOG** - System activity tracking
+
+### Supporting Objects
+- **10 Sequences** created for auto-incrementing primary keys
+- **Multiple indexes** created for performance optimization
+- **Foreign key constraints** enforced for referential integrity
+
+---
+
+## 5.2 Table Creation Screenshots
+
+### Core Tables
+
+#### DEPARTMENTS Table
+![Departments Table Creation](screenshots/departments.PNG)
+
+#### DOCTORS Table
+![Doctors Table Creation](screenshots/doctors.PNG)
+
+#### PATIENTS Table
+![Patients Table Creation](screenshots/patients.PNG)
+
+#### APPOINTMENTS Table
+![Appointments Table Creation](screenshots/appointments.PNG)
+
+#### DOCTOR_SCHEDULE Table
+![Doctor Schedule Table Creation](screenshots/doctorschedule.PNG)
+
+#### MEDICAL_RECORDS Table
+![Medical Records Table Creation](screenshots/medicalrecords.PNG)
+
+#### PRESCRIPTIONS Table
+![Prescriptions Table Creation](screenshots/prescriptions.PNG)
+
+#### BILLING Table
+![Billing Table Creation](screenshots/billing.PNG)
+
+#### HOLIDAYS Table
+![Holidays Table Creation](screenshots/holidays.PNG)
+
+#### AUDIT_LOG Table
+![Audit Log Table Creation](screenshots/auditlog.PNG)
+
+---
+
+## 5.3 Sequence Creation
+
+All sequences created with NOCACHE option for data integrity.
+
+![Sequences Created](screenshots/sequence.PNG)
+
+**Sequences:**
+- seq_dept_id
+- seq_doctor_id
+- seq_patient_id
+- seq_appointment_id
+- seq_audit_log_id
+- seq_holiday_id
+- seq_schedule_id
+- seq_record_id
+- seq_prescription_id
+- seq_bill_id
+- seq_history_id
+
+---
+
+## 5.4 Index Creation
+
+Performance-optimized indexes created on frequently queried columns.
+
+![Indexes Created](screenshots/indexes.PNG)
+
+**Key Indexes:**
+- `idx_doctor_dept` - Doctor department lookup
+- `idx_appt_patient` - Patient appointments
+- `idx_appt_doctor` - Doctor appointments
+- `idx_appt_date` - Date-based appointment queries
+- `idx_appt_status` - Status filtering
+
+---
+
+## 5.5 Data Insertion Results
+
+### Row Count Summary
+
+Comprehensive dataset inserted across all tables meeting phase requirements.
+
+![Row Count Summary](screenshots/rowcounts.PNG)
+
+| Table | Row Count | 
+|-------|-----------|
+| PATIENTS | 102 | 
+| DOCTORS | 100 | 
+| APPOINTMENTS | 102 |
+| DEPARTMENTS | 100 |
+| DOCTOR_SCHEDULE | 100 | 
+| MEDICAL_RECORDS | 100 |
+| PRESCRIPTIONS | 70 | 
+| BILLING | 97 | 
+| HOLIDAYS | 20 | 
+| AUDIT_LOG | 20 |
+
+**Total Records:** 811 rows across all tables
+
+---
+
+## 5.6 Data Integrity Verification
+
+### 5.6.1 Constraint Validation
+
+All CHECK constraints properly enforced.
+
+![Constraint Validation](screenshots/constraint_validation.PNG)
+
+**Verified Constraints:**
+- ✅ Appointment status: Only 'SCHEDULED' exists (pre-testing state)
+- ✅ Payment status: CANCELLED, PAID, PENDING (valid states)
+- ✅ Doctor status: ACTIVE, INACTIVE, ON_LEAVE (valid states)
+- ✅ Patient gender: FEMALE, MALE (valid values)
+
+---
+
+### 5.6.2 Date Validation
+
+All dates are realistic and within acceptable ranges.
+
+![Date Validation](screenshots/date_validation.PNG)
+
+**Date Checks:**
+- ✅ No future birth dates (0 invalid records)
+- ✅ No future hire dates (1 expected test case)
+- ✅ No invalid consultation fees (0 records ≤ 0)
+- ✅ No invalid billing amounts (0 records ≤ 0)
+
+---
+
+### 5.6.3 Referential Integrity
+
+Foreign key relationships properly maintained.
+
+![Referential Integrity](screenshots/referential_integrity.PNG)
+
+**Relationship Tests:**
+- 70 patients without appointments (realistic for new registrations)
+- 70 doctors without appointments (recently hired staff)
+- 5 appointments without billing (pending payment processing)
+- 2 appointments without medical records (scheduled future visits)
+
+---
+
+### 5.6.4 Unique Constraint Validation
+
+Email and phone uniqueness properly enforced.
+
+![Unique Constraint Validation](screenshots/unique_validation.PNG)
+
+**Uniqueness Verified:**
+- ✅ No duplicate patient emails
+- ✅ No duplicate doctor emails
+- ✅ Each email appears exactly once
+
+---
+
+## 5.7 Testing Queries
+
+### 5.7.1 Basic Retrieval - Active Doctors
+
+![Active Doctors Query](screenshots/active_doctors.PNG)
+
+Sample active doctors showing complete profile information including specialization, contact details, and consultation fees.
+
+---
+
+### 5.7.2 Multi-Table JOIN - Doctor Analytics
+
+Complex aggregation query joining doctors, appointments, and billing tables.
+
+![Doctor Revenue Analytics](screenshots/doctor_revenue.PNG)
+
+**Query Purpose:** Calculate total appointments, completed visits, revenue, and average revenue per doctor.
+
+**Key Insights:**
+- Top revenue generator: Sarah Johnson (Interventional Cardiology) - $1,265
+- All doctors have 4 appointments each (even distribution for testing)
+- Revenue varies by specialization and consultation fees
+
+---
+
+### 5.7.3 Temporal Analysis - Monthly Appointment Trends
+
+![Monthly Appointment Trends](screenshots/monthly_trends.PNG)
+
+**Analysis:** Appointment distribution across December 2025 to April 2026.
+
+**Findings:**
+- Peak in January 2026 (31 appointments)
+- Lowest in April 2026 (2 appointments)
+- All current appointments are 'SCHEDULED' status
+- No cancellations or no-shows yet (pre-operational state)
+
+---
+
+### 5.7.4 Prescription Analytics
+
+![Prescription Analytics](screenshots/prescription_analytics.PNG)
+
+**Medication Usage Analysis:**
+- 8 different medications tracked
+- Each medication prescribed twice
+- Each medication prescribed to 2 unique patients
+- Balanced distribution for testing scenarios
+
+**Medications Tracked:**
+- Paracetamol, Ibuprofen, Amoxicillin, Prednisolone
+- Atorvastatin, Levothyroxine, Gabapentin, Metformin
+
+---
+
+### 5.7.5 Patient Appointment Schedule
+
+![Patient Upcoming Appointments](screenshots/patient_schedule.PNG)
+
+**Query Purpose:** Show scheduled appointments with patient and doctor details.
+
+**Sample Data Shows:**
+- Patient names and contact information
+- Appointment dates and times
+- Assigned doctor names and specializations
+- All appointments currently in 'SCHEDULED' status
+
+---
+
+### 5.7.6 Doctor Availability & Schedules
+
+![Doctor Schedules](screenshots/doctor_schedules.PNG)
+
+**Schedule Information:**
+- Doctor names with specializations
+- Department assignments
+- Day-wise availability
+- Shift start and end times
+- Maximum appointments per day
+
+**Pattern Observed:** Diverse specializations across multiple departments with varying schedule patterns.
+
+---
+
+### 5.7.7 Patient-Prescription Relationships
+
+![Patient Prescriptions](screenshots/patient_prescriptions.PNG)
+
+**Query Details:** Three-table join (prescriptions → medical_records → patients, doctors)
+
+**Data Shows:**
+- Patient names receiving prescriptions
+- Prescribing doctor names
+- Medicine details (name, dosage, frequency, duration)
+- Prescribed dates
+
+---
+
+### 5.7.8 Appointment Details with Context
+
+![Appointment Full Details](screenshots/appointment_details.PNG)
+
+**Comprehensive View:**
+- Appointment IDs and dates
+- Patient details
+- Doctor assignments
+- Consultation reasons
+- Current status
+
+**Sample Reasons:**
+- Sports Medicine Consultation
+- Spine Surgery Check
+- Pediatrics Follow-up
+- Pediatric Cardiology Check
+- Cosmetic Dermatology Follow-up
+
+---
+
+### 5.7.9 Consultation Fee Analysis
+
+![Consultation Fee Analysis](screenshots/consultation_fees.PNG)
+
+**Above-Average Fee Analysis:**
+- Neurosurgery specialists charge highest fees (350)
+- Multiple specializations above average
+- Fee range: 290-350 for premium specializations
+
+**Specializations Analyzed:**
+- Neurosurgery, Spine Surgery, Cardiac Surgery
+- Trauma Surgery, Emergency Medicine, Oncology
+- Cardiac Surgery, Laparoscopic Surgery
+
+---
+
+### 5.7.10 Department Workload Distribution
+
+![Department Workload](screenshots/active.PNG)
+
+**Active Doctor Count by Department:**
+- Cardiology: 16 active doctors (highest)
+- Orthopedics: 13 active doctors
+- Neurology: 12 active doctors
+- Pediatrics: 12 active doctors
+- Emergency Medicine: 7 active doctors
+- Others: 6-7 doctors each
+
+**Purpose:** Resource allocation and capacity planning analytics.
+
+---
+
+### 5.7.12 Top Revenue Generators
+
+![Top Revenue Doctors](screenshots/paid.PNG)
+
+**Top 5 Doctors by Revenue (Paid Bills Only):**
+1. Thomas Brown - Spine Surgery: $1,250
+2. James Anderson - Cosmetic Dermatology: $1,145
+3. Robert Williams - Joint Replacement: $1,120
+4. Maria Garcia - Preventive Cardiology: $1,015
+5. Anna Kowalski - Epilepsy: $1,010
+
+---
+
 
 
 **Course:** Database Development with PL/SQL (INSY 8311)  

@@ -467,53 +467,9 @@ The Healthcare Management System consists of **10 core entities**:
 
 ---
 
-## Overview
-
-This phase involves creating and configuring the Oracle Pluggable Database (PDB) for the Hospital Appointment Optimization System. The database is designed to support healthcare operations including patient management, appointment scheduling, medical records, billing, and comprehensive audit trails.
-
----
-
-## Database Configuration Summary
-
-### Database Details
-- **PDB Name:** `WED_27400_CELINE_HOSPITALAPPTOPT_DB`
-- **Database Type:** Oracle 21c Enterprise Edition
-
-### Admin User
-- **Username:** `celine_admin`
-- **Password:** `celine`
-- **Privileges:** DBA, PDB_DBA (Super Admin)
-- **Default Tablespace:** HOSPITAL_DATA
-- **Temporary Tablespace:** HOSPITAL_TEMP
-
-### Tablespace Configuration
-
-| Tablespace Name | Type | Initial Size | Max Size | Autoextend | Purpose |
-|----------------|------|--------------|----------|------------|---------|
-| HOSPITAL_DATA | PERMANENT | 300 MB | 2048 MB | YES (50 MB) | Main data storage |
-| HOSPITAL_INDEXES | PERMANENT | 150 MB | 1024 MB | YES (25 MB) | Index storage |
-| HOSPITAL_LOBS | PERMANENT | 100 MB | 500 MB | YES (20 MB) | Large objects (CLOB) |
-| HOSPITAL_AUDIT | PERMANENT | 100 MB | 500 MB | YES (20 MB) | Audit log storage |
-| HOSPITAL_TEMP | TEMPORARY | 100 MB | 500 MB | YES (20 MB) | Temporary operations |
-
-### Memory Configuration
-- **SGA Target:** 512 MB (configurable)
-- **PGA Aggregate Target:** 550 MB
-- **Memory Target:** 1 GB (Automatic Memory Management)
-
-### Archive Logging
-- **Status:** Enabled
-- **Archive Mode:** ARCHIVELOG
-- **Archive Destination:** `C:\app\homes\OraDC21Home1\RDBMS`
-- **Current Log Sequence:** 36
-
----
-# Phase IV: Database Creation
-
-**Project:** Hospital Appointment Optimization System  
-**Student:** Umukamisha Celine  
-**Student ID:** 27400  
+**Project:** Hospital Appointment Optimization System   
 **Database Name:** `wed_27400_celine_HospitalAppOpt_db`  
+
 
 ---
 
@@ -529,6 +485,7 @@ This phase involves creating and configuring the Oracle Pluggable Database (PDB)
 - **PDB Name:** `WED_27400_CELINE_HOSPITALAPPTOPT_DB`
 - **Database Type:** Oracle 21c Enterprise Edition
 - **Status:** READ WRITE, Accessible
+- **Created:** December 3, 2025
 
 ### Admin User
 - **Username:** `celine_admin`
@@ -559,8 +516,6 @@ This phase involves creating and configuring the Oracle Pluggable Database (PDB)
 - **Current Log Sequence:** 36
 
 ---
-
-
 
 ### 1. Connect to CDB as SYSDBA
 ```sql
@@ -621,7 +576,7 @@ FROM v$pdbs
 WHERE name = 'WED_27400_CELINE_HOSPITALAPPTOPT_DB';
 ```
 
-![PDB Status](screenshots/02_pdb_status.png)
+![PDB Status](screenshots/pdb_status.PNG)
 *PDB status verification - READ WRITE, Accessible*
 
 **SQL Command:**
@@ -629,7 +584,7 @@ WHERE name = 'WED_27400_CELINE_HOSPITALAPPTOPT_DB';
 ALTER SESSION SET CONTAINER = wed_27400_celine_HospitalAppOpt_db;
 ```
 
-![Session Container](screenshots/03_session_container.png)
+![Session Container](screenshots/session_container.PNG)
 *ALTER SESSION SET CONTAINER command*
 
 **SQL Command:**
@@ -637,7 +592,7 @@ ALTER SESSION SET CONTAINER = wed_27400_celine_HospitalAppOpt_db;
 SELECT SYS_CONTEXT('USERENV', 'CON_NAME') AS current_container FROM dual;
 ```
 
-![Current Container](screenshots/04_current_container.png)
+![Current Container](screenshots/current_container.PNG)
 *Current container verification*
 
 ---
@@ -681,7 +636,7 @@ AUTOEXTEND ON NEXT 20M MAXSIZE 500M
 EXTENT MANAGEMENT LOCAL UNIFORM SIZE 1M;
 ```
 
-![Tablespaces Created](screenshots/05_tablespaces_created.png)
+![Tablespaces Created](screenshots/tablespace_created.PNG)
 *All 5 tablespaces created successfully*
 
 **SQL Command:**
@@ -692,7 +647,7 @@ WHERE tablespace_name LIKE 'HOSPITAL%'
 ORDER BY tablespace_name;
 ```
 
-![Tablespace Status](screenshots/06_tablespace_status.png)
+![Tablespace Status](screenshots/tablespace_status.PNG)
 *Tablespaces ONLINE and PERMANENT status*
 
 **SQL Command:**
@@ -707,7 +662,7 @@ GROUP BY tablespace_name, autoextensible
 ORDER BY tablespace_name;
 ```
 
-![Tablespace Sizes](screenshots/07_tablespace_sizes.png)
+![Tablespace Sizes](screenshots/tablespace_sizes.PNG)
 *Tablespace sizes and autoextend configuration*
 
 ---
@@ -740,7 +695,7 @@ WHERE grantee = 'CELINE_ADMIN'
 ORDER BY granted_role;
 ```
 
-![User Privileges](screenshots/08_user_privileges.png)
+![User Privileges](screenshots/user_privileges.PNG)
 *DBA and PDB_DBA roles granted to CELINE_ADMIN*
 
 **SQL Command:**
@@ -750,7 +705,7 @@ FROM dba_users
 WHERE username = 'CELINE_ADMIN';
 ```
 
-![User Configuration](screenshots/09_user_config.png)
+![User Configuration](screenshots/user_config.PNG)
 *Default and temporary tablespace assignment*
 
 ---
@@ -773,7 +728,7 @@ WHERE name IN ('memory_target', 'sga_target', 'pga_aggregate_target')
 ORDER BY name;
 ```
 
-![Memory Parameters](screenshots/10_memory_params.png)
+![Memory Parameters](screenshots/memory_params.PNG)
 *SGA, PGA, and memory_target settings*
 
 ---
@@ -785,27 +740,10 @@ ORDER BY name;
 ARCHIVE LOG LIST;
 ```
 
-![Archive Log Status](screenshots/11_archive_log.png)
+![Archive Log Status](screenshots/archive_log.PNG)
 *Archive log mode enabled and destination configured*
 
----
 
-## Connection Instructions
-
-### Using SQL*Plus
-```bash
-sqlplus celine_admin/celine@localhost:1521/wed_27400_celine_HospitalAppOpt_db
-```
-
-### Using SQL Developer
-- **Connection Name:** Hospital_AppOpt_DB
-- **Username:** celine_admin
-- **Password:** celine
-- **Hostname:** localhost
-- **Port:** 1521
-- **Service Name:** wed_27400_celine_HospitalAppOpt_db
-
----
 
 **Course:** Database Development with PL/SQL (INSY 8311)  
 **Institution:** Adventist University of Central Africa (AUCA)  

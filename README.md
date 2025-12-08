@@ -647,7 +647,7 @@ FROM dba_users
 WHERE username = 'CELINE_ADMIN';
 ```
 
-![Verify Admin User](screenshots/verfyadminuser.PNG)
+![Verify Admin User](screenshots/verifyadminuser.PNG)
 
 ---
 

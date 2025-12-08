@@ -467,103 +467,44 @@ The Healthcare Management System consists of **10 core entities**:
 
 ---
 
-**Project:** Hospital Appointment Optimization System   
-**Database Name:** `wed_27400_celine_HospitalAppOpt_db`  
+# Phase IV: Database Creation
 
-
----
-
-## Overview
-
-This phase involves creating and configuring the Oracle Pluggable Database (PDB) for the Hospital Appointment Optimization System. The database is designed to support healthcare operations including patient management, appointment scheduling, medical records, billing, and comprehensive audit trails.
+**Student:** Umukamisha Celine  
+**ID:** 27400  
+**Database:** wed_27400_celine_HospitalAppOpt_db  
+**Date:** December 7, 2025
 
 ---
 
-## Database Configuration Summary
+## Database Setup
 
-### Database Details
-- **PDB Name:** `WED_27400_CELINE_HOSPITALAPPTOPT_DB`
-- **Database Type:** Oracle 21c Enterprise Edition
-- **Status:** READ WRITE, Accessible
-- **Created:** December 3, 2025
-
-### Admin User
-- **Username:** `celine_admin`
-- **Password:** `celine`
+### Database Configuration
+- **PDB Name:** WED_27400_CELINE_HOSPITALAPPTOPT_DB
+- **Admin Username:** celine_admin
+- **Admin Password:** celine
 - **Privileges:** DBA, PDB_DBA (Super Admin)
-- **Default Tablespace:** HOSPITAL_DATA
-- **Temporary Tablespace:** HOSPITAL_TEMP
 
-### Tablespace Configuration
+### Tablespaces Created
+1. HOSPITAL_DATA (300 MB, max 2048 MB, autoextend enabled)
+2. HOSPITAL_INDEXES (150 MB, max 1024 MB, autoextend enabled)
+3. HOSPITAL_LOBS (100 MB, max 500 MB, autoextend enabled)
+4. HOSPITAL_AUDIT (100 MB, max 500 MB, autoextend enabled)
+5. HOSPITAL_TEMP (100 MB, max 500 MB, temporary tablespace)
 
-| Tablespace Name | Type | Initial Size | Max Size | Autoextend | Purpose |
-|----------------|------|--------------|----------|------------|---------|
-| HOSPITAL_DATA | PERMANENT | 300 MB | 2048 MB | YES (50 MB) | Main data storage |
-| HOSPITAL_INDEXES | PERMANENT | 150 MB | 1024 MB | YES (25 MB) | Index storage |
-| HOSPITAL_LOBS | PERMANENT | 100 MB | 500 MB | YES (20 MB) | Large objects (CLOB) |
-| HOSPITAL_AUDIT | PERMANENT | 100 MB | 500 MB | YES (20 MB) | Audit log storage |
-| HOSPITAL_TEMP | TEMPORARY | 100 MB | 500 MB | YES (20 MB) | Temporary operations |
-
-### Memory Configuration
-- **SGA Target:** 512 MB (configurable)
-- **PGA Aggregate Target:** 550 MB
-- **Memory Target:** 1 GB (Automatic Memory Management)
+### Memory Parameters
+- SGA Target: 512 MB
+- PGA Aggregate Target: 550 MB
+- Memory Target: 1 GB
 
 ### Archive Logging
-- **Status:** Enabled
-- **Archive Mode:** ARCHIVELOG
-- **Archive Destination:** `C:\app\homes\OraDC21Home1\RDBMS`
-- **Current Log Sequence:** 36
+- Status: Enabled
+- Destination: C:\app\homes\OraDC21Home1\RDBMS
 
 ---
 
-### 1. Connect to CDB as SYSDBA
-```sql
-sqlplus sys/password@localhost:1521/ORCL as sysdba
-```
+## Step 4a: Database Creation
 
-### 2. Create Pluggable Database
-```sql
-@01_create_database.sql
-```
-
-### 3. Switch to PDB
-```sql
-ALTER SESSION SET CONTAINER = wed_27400_celine_HospitalAppOpt_db;
-```
-
-### 4. Create Tablespaces
-```sql
-@02_create_tablespaces.sql
-```
-
-### 5. Configure Admin User
-```sql
-@03_configure_user.sql
-```
-
-### 6. Verify Installation
-```sql
-@05_verification_queries.sql
-```
-
----
-
-## Verification Results
-
-### Step 1: Database Creation
-
-**SQL Command:**
-```sql
-CREATE PLUGGABLE DATABASE wed_27400_celine_HospitalAppOpt_db
-ADMIN USER celine_admin IDENTIFIED BY celine
-FILE_NAME_CONVERT = ('pdbseed', 'wed_27400_celine_HospitalAppOpt_db');
-```
-
-![PDB Creation](screenshots/Create.PNG)
-*CREATE PLUGGABLE DATABASE command execution*
-
-**SQL Command:**
+### 1. Check PDB Created and Open
 ```sql
 SELECT name AS pdb_name, 
        open_mode AS status,
@@ -576,81 +517,71 @@ FROM v$pdbs
 WHERE name = 'WED_27400_CELINE_HOSPITALAPPTOPT_DB';
 ```
 
-![PDB Status](screenshots/pdb_status.PNG)
-*PDB status verification - READ WRITE, Accessible*
-
-**SQL Command:**
-```sql
-ALTER SESSION SET CONTAINER = wed_27400_celine_HospitalAppOpt_db;
-```
-
-![Session Container](screenshots/session_container.PNG)
-*ALTER SESSION SET CONTAINER command*
-
-**SQL Command:**
-```sql
-SELECT SYS_CONTEXT('USERENV', 'CON_NAME') AS current_container FROM dual;
-```
-
-![Current Container](screenshots/current_container.PNG)
-*Current container verification*
+![Check PDB Status](screenshots/checkingpdbifcreatedopen.PNG)
 
 ---
 
-### Step 2: Tablespace Configuration
-
-**SQL Commands:**
+### 2. Confirm in Correct Container
 ```sql
--- Main Data Tablespace
-CREATE TABLESPACE HOSPITAL_DATA
-DATAFILE 'hospital_data01.dbf' SIZE 300M
-AUTOEXTEND ON NEXT 50M MAXSIZE 2048M
-EXTENT MANAGEMENT LOCAL AUTOALLOCATE
-SEGMENT SPACE MANAGEMENT AUTO;
+ALTER SESSION SET CONTAINER = wed_27400_celine_HospitalAppOpt_db;
 
--- Index Tablespace
-CREATE TABLESPACE HOSPITAL_INDEXES
-DATAFILE 'hospital_indexes01.dbf' SIZE 150M
-AUTOEXTEND ON NEXT 25M MAXSIZE 1024M
-EXTENT MANAGEMENT LOCAL AUTOALLOCATE
-SEGMENT SPACE MANAGEMENT AUTO;
-
--- Large Objects Tablespace
-CREATE TABLESPACE HOSPITAL_LOBS
-DATAFILE 'hospital_lobs01.dbf' SIZE 100M
-AUTOEXTEND ON NEXT 20M MAXSIZE 500M
-EXTENT MANAGEMENT LOCAL AUTOALLOCATE
-SEGMENT SPACE MANAGEMENT AUTO;
-
--- Audit Log Tablespace
-CREATE TABLESPACE HOSPITAL_AUDIT
-DATAFILE 'hospital_audit01.dbf' SIZE 100M
-AUTOEXTEND ON NEXT 20M MAXSIZE 500M
-EXTENT MANAGEMENT LOCAL AUTOALLOCATE
-SEGMENT SPACE MANAGEMENT AUTO;
-
--- Temporary Tablespace
-CREATE TEMPORARY TABLESPACE HOSPITAL_TEMP
-TEMPFILE 'hospital_temp01.dbf' SIZE 100M
-AUTOEXTEND ON NEXT 20M MAXSIZE 500M
-EXTENT MANAGEMENT LOCAL UNIFORM SIZE 1M;
+SELECT SYS_CONTEXT('USERENV', 'CON_NAME') AS current_container FROM dual;
 ```
 
-![Tablespaces Created](screenshots/tablespace_created.PNG)
-*All 5 tablespaces created successfully*
+![Confirm Container](screenshots/confirmifaminthecorrectcontainer.PNG)
 
-**SQL Command:**
+---
+
+### 3. Create Pluggable Database
 ```sql
-SELECT tablespace_name, status, contents, extent_management, segment_space_management
-FROM dba_tablespaces
-WHERE tablespace_name LIKE 'HOSPITAL%'
-ORDER BY tablespace_name;
+CREATE PLUGGABLE DATABASE wed_27400_celine_HospitalAppOpt_db
+ADMIN USER celine_admin IDENTIFIED BY celine
+FILE_NAME_CONVERT = ('pdbseed', 'wed_27400_celine_HospitalAppOpt_db');
 ```
 
-![Tablespace Status](screenshots/tablespace_status.PNG)
-*Tablespaces ONLINE and PERMANENT status*
+![Create PDB](screenshots/Create.PNG)
 
-**SQL Command:**
+---
+
+### 4. Full Stack Check
+```sql
+SELECT SYS_CONTEXT('USERENV', 'CON_NAME') AS container,
+       SYS_CONTEXT('USERENV', 'SESSION_USER') AS current_user,
+       SYS_CONTEXT('USERENV', 'IP_ADDRESS') AS ip_address,
+       TO_CHAR(SYSDATE, 'YYYY-MM-DD HH24:MI:SS') AS current_time
+FROM dual;
+```
+
+![Full Stack Check](screenshots/fullstackcheck.PNG)
+
+---
+
+## Step 4b: Configuration
+
+### 1. Admin User Privileges
+```sql
+GRANT DBA TO celine_admin;
+GRANT PDB_DBA TO celine_admin;
+
+SELECT grantee, granted_role
+FROM dba_role_privs
+WHERE grantee = 'CELINE_ADMIN';
+```
+
+![Admin Privileges](sceenshots/adminpriviledge.PNG)
+
+---
+
+### 2. Archive Logging
+```sql
+ARCHIVE LOG LIST;
+```
+
+![Archive Logs](sceenshots/archivelogs.PNG)
+
+---
+
+### 3. Autoextend Configuration
 ```sql
 SELECT tablespace_name, 
        ROUND(SUM(bytes)/1024/1024, 2) AS size_mb,
@@ -658,91 +589,67 @@ SELECT tablespace_name,
        autoextensible
 FROM dba_data_files
 WHERE tablespace_name LIKE 'HOSPITAL%'
-GROUP BY tablespace_name, autoextensible
-ORDER BY tablespace_name;
+GROUP BY tablespace_name, autoextensible;
 ```
 
-![Tablespace Sizes](screenshots/tablespace_sizes.PNG)
-*Tablespace sizes and autoextend configuration*
+![Autoextend](screenshots/autoextend.PNG)
 
 ---
 
-### Step 3: Admin User Configuration
-
-**SQL Commands:**
+### 4. Memory Parameters
 ```sql
--- Grant DBA role to admin user
-GRANT DBA TO celine_admin;
-
--- Grant PDB_DBA role
-GRANT PDB_DBA TO celine_admin;
-
--- Set default and temporary tablespaces
-ALTER USER celine_admin 
-DEFAULT TABLESPACE HOSPITAL_DATA
-TEMPORARY TABLESPACE HOSPITAL_TEMP
-QUOTA UNLIMITED ON HOSPITAL_DATA
-QUOTA UNLIMITED ON HOSPITAL_INDEXES
-QUOTA UNLIMITED ON HOSPITAL_LOBS
-QUOTA UNLIMITED ON HOSPITAL_AUDIT;
+SELECT name AS parameter, 
+       value AS current_value, 
+       isdefault
+FROM v$parameter
+WHERE name IN ('memory_target', 'sga_target', 'pga_aggregate_target');
 ```
 
-**SQL Command:**
+![Memory Parameters](screenshots/parameters.PNG)
+
+---
+
+### 5. Tablespace Status
 ```sql
-SELECT grantee, granted_role
-FROM dba_role_privs
-WHERE grantee = 'CELINE_ADMIN'
-ORDER BY granted_role;
+SELECT tablespace_name, 
+       status, 
+       contents, 
+       extent_management, 
+       segment_space_management
+FROM dba_tablespaces
+WHERE tablespace_name LIKE 'HOSPITAL%';
 ```
 
-![User Privileges](screenshots/user_privileges.PNG)
-*DBA and PDB_DBA roles granted to CELINE_ADMIN*
+![Tablespace Status](screenshots/tablespace.PNG)
 
-**SQL Command:**
+---
+
+### 6. Temporary Tablespace
 ```sql
-SELECT username, default_tablespace, temporary_tablespace, account_status
+SELECT tablespace_name, 
+       contents, 
+       status
+FROM dba_tablespaces
+WHERE tablespace_name LIKE 'HOSPITAL%';
+```
+
+![Temporary Tablespace](screenshots/temptablespace.PNG)
+
+---
+
+### 7. Verify Admin User Configuration
+```sql
+SELECT username, 
+       default_tablespace, 
+       temporary_tablespace, 
+       account_status
 FROM dba_users
 WHERE username = 'CELINE_ADMIN';
 ```
 
-![User Configuration](screenshots/user_config.PNG)
-*Default and temporary tablespace assignment*
+![Verify Admin User](screenshots/verfyadminuser.PNG)
 
 ---
-
-### Step 4: Memory Configuration
-
-**SQL Commands:**
-```sql
--- Set memory parameters
-ALTER SYSTEM SET sga_target = 512M SCOPE = BOTH;
-ALTER SYSTEM SET pga_aggregate_target = 256M SCOPE = BOTH;
-ALTER SYSTEM SET memory_target = 1G SCOPE = BOTH;
-```
-
-**SQL Command:**
-```sql
-SELECT name AS parameter, value AS current_value, isdefault
-FROM v$parameter
-WHERE name IN ('memory_target', 'sga_target', 'pga_aggregate_target')
-ORDER BY name;
-```
-
-![Memory Parameters](screenshots/memory_params.PNG)
-*SGA, PGA, and memory_target settings*
-
----
-
-### Step 5: Archive Logging
-
-**SQL Command:**
-```sql
-ARCHIVE LOG LIST;
-```
-
-![Archive Log Status](screenshots/archive_log.PNG)
-*Archive log mode enabled and destination configured*
-
 
 
 **Course:** Database Development with PL/SQL (INSY 8311)  

@@ -2311,10 +2311,6 @@ END check_operation_allowed;
 /
 ```
 
-**Screenshot:**
-
-![Check operation function](screenshots/check_operation_function.png)
-
 *Shows function creation with logic flow: extracts day_of_week using TO_CHAR with 'DAY' format, checks if SATURDAY or SUNDAY (returns ALLOWED), queries holidays table for matching dates, returns ALLOWED for holidays, otherwise returns DENIED message for weekdays. Demonstrates nested DECLARE block for holiday check.*
 
 **Test Cases:**

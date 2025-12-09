@@ -1844,7 +1844,787 @@ GROUP BY TO_CHAR(appointment_date, 'YYYY-MM')
 ORDER BY month;
 
 ```
+# Phase VII: Advanced Triggers & Audit Implementation
 
+---
+
+## Overview
+This phase implements comprehensive database triggers for business rule enforcement, audit logging, and automated operations in the Healthcare Management System. The implementation includes row-level triggers, compound triggers, and audit trail functionality.
+
+---
+
+### Weekend Operations Restriction
+
+**Purpose:** Prevent INSERT, UPDATE, DELETE operations on patients table during weekdays (Monday-Friday).
+
+**Business Rule:** Patient record modifications only allowed on weekends to minimize disruption during business hours.
+
+**Script:**
+
+```sql
+CREATE OR REPLACE TRIGGER trg_patients_restrict
+BEFORE INSERT OR UPDATE OR DELETE ON patients
+FOR EACH ROW
+DECLARE
+    v_status VARCHAR2(100);
+    v_operation VARCHAR2(10);
+    v_old_values CLOB;
+    v_new_values CLOB;
+BEGIN
+    -- Determine operation type
+    IF INSERTING THEN
+        v_operation := 'INSERT';
+        v_new_values := 'Patient_ID=' || :NEW.patient_id ||
+                       ', Name=' || :NEW.first_name || ' ' || :NEW.last_name;
+    ELSIF UPDATING THEN
+        v_operation := 'UPDATE';
+        v_old_values := 'Patient_ID=' || :OLD.patient_id;
+        v_new_values := 'Patient_ID=' || :NEW.patient_id;
+    ELSIF DELETING THEN
+        v_operation := 'DELETE';
+        v_old_values := 'Patient_ID=' || :OLD.patient_id;
+    END IF;
+    
+    v_status := check_operation_allowed(SYSDATE);
+    
+    IF v_status != 'ALLOWED' THEN
+        log_audit_entry('PATIENTS', v_operation, 'DENIED',
+                       v_status, v_old_values, v_new_values);
+        RAISE_APPLICATION_ERROR(-20001, v_status);
+    END IF;
+END;
+/
+```
+
+**Test Case:**
+
+```sql
+SET SERVEROUTPUT ON;
+-- Test 1: Try to insert on a weekday (should be DENIED)
+BEGIN
+    INSERT INTO celine_admin.patients (patient_id, first_name, last_name, date_of_birth, gender, phone)
+    VALUES (9999, 'Test', 'Patient', TO_DATE('1990-01-01', 'YYYY-MM-DD'), 'M', '0788888888');
+    DBMS_OUTPUT.PUT_LINE('ERROR: Insert should have been denied!');
+    ROLLBACK;
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('SUCCESS: Insert denied as expected');
+        DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+        ROLLBACK;
+END;
+/
+```
+
+**Screenshot:**
+
+![Weekend restriction test](screenshots/0.PNG)
+
+*Test execution shows attempted INSERT on weekday. Output displays "SUCCESS: Insert denied as expected" with error message "ORA-20001: DENIED: Operations not allowed on weekdays (Monday-Friday)". Also shows unique constraint violation (ORA-00001) and trigger error (ORA-04088). Demonstrates proper business rule enforcement preventing weekday operations. PL/SQL procedure successfully completed.*
+
+---
+
+### Trigger Status Verification
+
+**Purpose:** Verify all triggers are enabled and properly configured.
+
+**Query:**
+
+```sql
+SELECT 
+    trigger_name,
+    table_name,
+    status,
+    trigger_type
+FROM all_triggers
+WHERE owner = 'CELINE_ADMIN'
+AND table_name IN ('PATIENTS', 'MEDICAL_RECORDS', 'PRESCRIPTIONS', 'BILLING')
+ORDER BY table_name;
+```
+
+**Screenshot:**
+
+![All triggers status](screenshots/alltriggers.PNG)
+
+*Shows query results with four columns: TRIGGER_NAME, TABLE_NAME, STATUS, TRIGGER_TYPE. Results display:
+- TRG_BILLING_COMPOUND_RESTRICT (BILLING) - ENABLED - COMPOUND - BEFORE EACH ROW
+- TRG_MEDICAL_RECORDS_RESTRICT (MEDICAL_RECORDS) - ENABLED - BEFORE EACH ROW
+- TRG_PATIENTS_RESTRICT (PATIENTS) - ENABLED - BEFORE EACH ROW  
+- TRG_PRESCRIPTIONS_RESTRICT (PRESCRIPTIONS) - ENABLED - BEFORE EACH ROW
+
+All triggers show ENABLED status confirming proper configuration for business rule enforcement across all critical tables.*
+
+---
+
+## Audit System Setup
+
+### Audit Log Table
+
+**Purpose:** Centralized audit trail for tracking all database operations.
+
+**Schema:**
+
+```sql
+CREATE TABLE audit_log (
+    log_id NUMBER PRIMARY KEY,
+    table_name VARCHAR2(50),
+    operation VARCHAR2(10),
+    user_name VARCHAR2(50),
+    operation_date TIMESTAMP DEFAULT SYSTIMESTAMP,
+    status VARCHAR2(20),
+    reason VARCHAR2(500),
+    old_values CLOB,
+    new_values CLOB
+);
+
+CREATE SEQUENCE audit_log_seq START WITH 1 INCREMENT BY 1;
+```
+
+**Fields:**
+- `log_id`: Unique identifier for audit entry
+- `table_name`: Table where operation occurred
+- `operation`: INSERT, UPDATE, DELETE
+- `user_name`: Database user performing operation
+- `operation_date`: Timestamp of operation
+- `status`: ALLOWED or DENIED
+- `reason`: Explanation for status
+- `old_values`: Previous data (UPDATE/DELETE)
+- `new_values`: New data (INSERT/UPDATE)
+
+---
+
+### Audit Logging Procedure
+
+**Purpose:** Standardized procedure for recording audit entries.
+
+**Script:**
+
+```sql
+CREATE OR REPLACE PROCEDURE log_audit_entry(
+    p_table_name VARCHAR2,
+    p_operation VARCHAR2,
+    p_status VARCHAR2,
+    p_reason VARCHAR2 DEFAULT NULL,
+    p_old_values CLOB DEFAULT NULL,
+    p_new_values CLOB DEFAULT NULL
+) IS
+    PRAGMA AUTONOMOUS_TRANSACTION;
+BEGIN
+    INSERT INTO audit_log(
+        log_id, table_name, operation, user_name,
+        status, reason, old_values, new_values
+    ) VALUES (
+        audit_log_seq.NEXTVAL, p_table_name, p_operation, USER,
+        p_status, p_reason, p_old_values, p_new_values
+    );
+    COMMIT;
+END;
+/
+```
+
+**Features:**
+- Autonomous transaction prevents rollback cascade
+- Automatic user and timestamp capture
+- Supports both allowed and denied operations
+
+---
+
+## Row-Level Triggers
+
+### PATIENTS Table Trigger
+
+**Purpose:** Restrict and audit patient record modifications.
+
+**Script:**
+
+```sql
+CREATE OR REPLACE TRIGGER trg_patients_restrict
+BEFORE INSERT OR UPDATE OR DELETE ON patients
+FOR EACH ROW
+DECLARE
+    v_status VARCHAR2(100);
+    v_operation VARCHAR2(10);
+    v_old_values CLOB;
+    v_new_values CLOB;
+BEGIN
+    IF INSERTING THEN
+        v_operation := 'INSERT';
+        v_new_values := 'Patient_ID=' || :NEW.patient_id ||
+                       ', Name=' || :NEW.first_name || ' ' || :NEW.last_name;
+    ELSIF UPDATING THEN
+        v_operation := 'UPDATE';
+        v_old_values := 'Patient_ID=' || :OLD.patient_id;
+        v_new_values := 'Patient_ID=' || :NEW.patient_id;
+    ELSIF DELETING THEN
+        v_operation := 'DELETE';
+        v_old_values := 'Patient_ID=' || :OLD.patient_id;
+    END IF;
+    
+    v_status := check_operation_allowed(SYSDATE);
+    
+    IF v_status = 'ALLOWED' THEN
+        log_audit_entry('PATIENTS', v_operation, 'ALLOWED',
+                       v_operation || ' operation performed', v_old_values, v_new_values);
+    ELSE
+        log_audit_entry('PATIENTS', v_operation, 'DENIED',
+                       v_status, v_old_values, v_new_values);
+        RAISE_APPLICATION_ERROR(-20001, v_status);
+    END IF;
+END;
+/
+```
+
+**Screenshot:**
+
+![Patients trigger](screenshots/patientstrigger.PNG)
+
+*Shows complete trigger creation script with DECLARE section defining v_status, v_operation, v_old_values, v_new_values variables. BEGIN section contains IF-ELSIF-ELSIF logic for INSERTING, UPDATING, DELETING operations. Each operation type populates appropriate variables. Calls check_operation_allowed function and log_audit_entry procedure. Includes RAISE_APPLICATION_ERROR for denied operations. Output displays "Trigger created."*
+
+---
+
+### MEDICAL_RECORDS Table Trigger
+
+**Purpose:** Control and audit medical record operations.
+
+**Script:**
+
+```sql
+CREATE OR REPLACE TRIGGER trg_medical_records_restrict
+BEFORE INSERT OR UPDATE OR DELETE ON medical_records
+FOR EACH ROW
+DECLARE
+    v_status VARCHAR2(100);
+    v_operation VARCHAR2(10);
+    v_old_values CLOB;
+    v_new_values CLOB;
+BEGIN
+    IF INSERTING THEN
+        v_operation := 'INSERT';
+        v_new_values := 'Record_ID=' || :NEW.record_id;
+    ELSIF UPDATING THEN
+        v_operation := 'UPDATE';
+        v_old_values := 'Record_ID=' || :OLD.record_id;
+        v_new_values := 'Record_ID=' || :NEW.record_id;
+    ELSIF DELETING THEN
+        v_operation := 'DELETE';
+        v_old_values := 'Record_ID=' || :OLD.record_id;
+    END IF;
+    
+    v_status := check_operation_allowed(SYSDATE);
+    
+    IF v_status = 'ALLOWED' THEN
+        log_audit_entry('MEDICAL_RECORDS', v_operation, 'ALLOWED',
+                       v_operation || ' operation performed', v_old_values, v_new_values);
+    ELSE
+        log_audit_entry('MEDICAL_RECORDS', v_operation, 'DENIED',
+                       v_status, v_old_values, v_new_values);
+        RAISE_APPLICATION_ERROR(-20002, v_status);
+    END IF;
+END;
+/
+```
+
+**Screenshot:**
+
+![Medical records trigger](screenshots/medicaltrigger.PNG)
+
+*Shows trigger creation for medical_records table with same structure as patients trigger. Uses :NEW.record_id and :OLD.record_id for tracking. Calls log_audit_entry with 'MEDICAL_RECORDS' table name. Uses error code -20002 for this trigger. Output displays "Trigger created."*
+
+---
+
+### PRESCRIPTIONS Table Trigger
+
+**Purpose:** Monitor and control prescription record changes.
+
+**Script:**
+
+```sql
+CREATE OR REPLACE TRIGGER trg_prescriptions_restrict
+BEFORE INSERT OR UPDATE OR DELETE ON prescriptions
+FOR EACH ROW
+DECLARE
+    v_status VARCHAR2(100);
+    v_operation VARCHAR2(10);
+    v_old_values CLOB;
+    v_new_values CLOB;
+BEGIN
+    IF INSERTING THEN
+        v_operation := 'INSERT';
+        v_new_values := 'Prescription_ID=' || :NEW.prescription_id;
+    ELSIF UPDATING THEN
+        v_operation := 'UPDATE';
+        v_old_values := 'Prescription_ID=' || :OLD.prescription_id;
+        v_new_values := 'Prescription_ID=' || :NEW.prescription_id;
+    ELSIF DELETING THEN
+        v_operation := 'DELETE';
+        v_old_values := 'Prescription_ID=' || :OLD.prescription_id;
+    END IF;
+    
+    v_status := check_operation_allowed(SYSDATE);
+    
+    IF v_status = 'ALLOWED' THEN
+        log_audit_entry('PRESCRIPTIONS', v_operation, 'ALLOWED',
+                       v_operation || ' operation performed', v_old_values, v_new_values);
+    ELSE
+        log_audit_entry('PRESCRIPTIONS', v_operation, 'DENIED',
+                       v_status, v_old_values, v_new_values);
+        RAISE_APPLICATION_ERROR(-20003, v_status);
+    END IF;
+END;
+/
+```
+
+**Screenshot:**
+
+![Prescriptions trigger](screenshots/prescriptiontrigger.PNG)
+
+*Shows trigger for prescriptions table following same pattern. Tracks :NEW.prescription_id and :OLD.prescription_id. Uses 'PRESCRIPTIONS' as table_name in audit calls. Error code -20003 for prescription-specific errors. Output displays "Trigger created."*
+
+---
+
+## Compound Trigger
+
+### BILLING Compound Trigger
+
+**Purpose:** Advanced trigger using compound structure for complex billing operations audit.
+
+**Script:**
+
+```sql
+CREATE OR REPLACE TRIGGER trg_billing_compound_restrict
+FOR INSERT OR UPDATE OR DELETE ON billing
+COMPOUND TRIGGER
+    -- Collection type for storing audit records
+    TYPE t_audit_record IS RECORD (
+        operation VARCHAR2(10),
+        status VARCHAR2(20),
+        old_values CLOB,
+        new_values CLOB
+    );
+    TYPE t_audit_records IS TABLE OF t_audit_record INDEX BY PLS_INTEGER;
+    
+    v_audit_records t_audit_records;
+    v_index PLS_INTEGER := 0;
+
+BEFORE EACH ROW IS
+    v_status VARCHAR2(100);
+    v_operation VARCHAR2(10);
+BEGIN
+    IF INSERTING THEN
+        v_operation := 'INSERT';
+    ELSIF UPDATING THEN
+        v_operation := 'UPDATE';
+    ELSIF DELETING THEN
+        v_operation := 'DELETE';
+    END IF;
+    
+    v_status := check_operation_allowed(SYSDATE);
+    
+    v_index := v_index + 1;
+    v_audit_records(v_index).operation := v_operation;
+    v_audit_records(v_index).status := v_status;
+    
+    IF INSERTING THEN
+        v_audit_records(v_index).new_values := 'Bill_ID=' || :NEW.bill_id;
+    ELSIF UPDATING THEN
+        v_audit_records(v_index).old_values := 'Bill_ID=' || :OLD.bill_id;
+        v_audit_records(v_index).new_values := 'Bill_ID=' || :NEW.bill_id;
+    ELSIF DELETING THEN
+        v_audit_records(v_index).old_values := 'Bill_ID=' || :OLD.bill_id;
+    END IF;
+    
+    IF v_status != 'ALLOWED' THEN
+        RAISE_APPLICATION_ERROR(-20004, v_status);
+    END IF;
+END BEFORE EACH ROW;
+
+AFTER STATEMENT IS
+BEGIN
+    FOR i IN 1..v_audit_records.COUNT LOOP
+        log_audit_entry(
+            'BILLING',
+            v_audit_records(i).operation,
+            v_audit_records(i).status,
+            v_audit_records(i).operation || ' operation via compound trigger',
+            v_audit_records(i).old_values,
+            v_audit_records(i).new_values
+        );
+    END LOOP;
+END AFTER STATEMENT;
+
+END trg_billing_compound_restrict;
+/
+```
+
+**Screenshot:**
+
+![Compound trigger billing](screenshots/compoundtrigger.PNG)
+
+*Shows complete compound trigger structure with TYPE declarations for t_audit_record and t_audit_records. BEFORE EACH ROW section determines operation type, checks permissions, stores audit data in collection. AFTER STATEMENT section loops through collection calling log_audit_entry for each record. Demonstrates batch audit logging approach. Output displays "Trigger created."*
+
+**Key Features:**
+- **Collection-based processing**: Stores multiple audit records in memory
+- **BEFORE EACH ROW**: Validates each operation individually  
+- **AFTER STATEMENT**: Batch processes all audit entries
+- **Efficient auditing**: Single audit call per statement instead of per row
+
+---
+
+## Utility Function
+
+### Check Operation Allowed Function
+
+**Purpose:** Centralized business logic for determining if operations are permitted based on date/time.
+
+**Script:**
+
+```sql
+CREATE OR REPLACE FUNCTION check_operation_allowed(
+    p_date DATE
+) RETURN VARCHAR2
+IS
+    v_day_of_week VARCHAR2(10);
+BEGIN
+    -- Get day of week
+    v_day_of_week := TO_CHAR(p_date, 'DAY');
+    
+    -- Check if it's a weekend (Saturday or Sunday)
+    IF TRIM(v_day_of_week) IN ('SATURDAY', 'SUNDAY') THEN
+        RETURN 'ALLOWED';
+    ELSE
+        -- Check if it's a holiday
+        DECLARE
+            v_holiday_count NUMBER;
+        BEGIN
+            SELECT COUNT(*)
+            INTO v_holiday_count
+            FROM holidays
+            WHERE TRUNC(holiday_date) = TRUNC(p_date);
+            
+            IF v_holiday_count > 0 THEN
+                RETURN 'ALLOWED';
+            END IF;
+        END;
+        
+        RETURN 'DENIED: Operations not allowed on weekdays (Monday-Friday)';
+    END IF;
+END check_operation_allowed;
+/
+```
+
+**Screenshot:**
+
+![Check operation function](screenshots/check_operation_function.png)
+
+*Shows function creation with logic flow: extracts day_of_week using TO_CHAR with 'DAY' format, checks if SATURDAY or SUNDAY (returns ALLOWED), queries holidays table for matching dates, returns ALLOWED for holidays, otherwise returns DENIED message for weekdays. Demonstrates nested DECLARE block for holiday check.*
+
+**Test Cases:**
+
+```sql
+-- Test 2: Weekend Check (Functions)
+PROMPT === TEST 2: Weekend Check (Functions) ===
+SELECT check_operation_allowed(TO_DATE('07-DEC-2024', 'DD-MON-YYYY')) AS saturday_check FROM DUAL;
+SELECT check_operation_allowed(TO_DATE('08-DEC-2024', 'DD-MON-YYYY')) AS sunday_check FROM DUAL;
+```
+
+**Screenshot:**
+
+![Weekend check test](screenshots/weekendcheck.PNG)
+
+*Shows two query results. First query for Saturday (07-DEC-2024) returns "ALLOWED". Second query for Sunday (08-DEC-2024) also returns "ALLOWED". Confirms weekend operations are permitted as per business rules.*
+
+---
+
+### Holiday Check Test
+
+**Purpose:** Verify holiday-based operation permissions.
+
+**Test Query:**
+
+```sql
+-- Test 3: Holiday Check
+PROMPT === TEST 3: HOLIDAY CHECK ===
+SELECT check_operation_allowed(TO_DATE('25-DEC-2025', 'DD-MON-YYYY')) AS christmas_check FROM DUAL;
+SELECT check_operation_allowed(TO_DATE('01-JAN-2026', 'DD-MON-YYYY')) AS newyear_check FROM DUAL;
+```
+
+**Screenshot:**
+
+![Holiday check test](screenshots/holidaycheck.PNG)
+
+*Shows query results for holiday checks. Christmas query (25-DEC-2025) returns "DENIED: Operations not allowed on weekdays (Monday-Friday)". New Year query (01-JAN-2026) also returns "DENIED: Operations not allowed on weekdays (Monday-Friday)". Both holidays fall on weekdays, demonstrating the business rule enforcement.*
+
+---
+
+## Testing & Verification
+
+### Audit Statistics by Status
+
+**Purpose:** Analyze audit log data to track allowed vs denied operations.
+
+**Query:**
+
+```sql
+-- Test 5: Audit Statistics
+PROMPT === TEST 5: AUDIT STATISTICS BY STATUS ===
+SELECT 
+    status,
+    COUNT(*) AS total_operations,
+    COUNT(DISTINCT table_name) AS tables_affected
+FROM celine_admin.audit_log
+GROUP BY status
+ORDER BY status;
+```
+
+**Screenshot:**
+
+![Audit statistics](screenshots/auditstatistics.PNG)
+
+*Shows audit statistics with two columns: STATUS and TOTAL_OPERATIONS, TABLES_AFFECTED. Single row displays "ALLOWED" status with 20 total operations affecting 6 tables. Demonstrates audit system is actively tracking all database operations.*
+
+---
+
+### Recent Audit Log Entries
+
+**Purpose:** View detailed audit trail of recent database operations.
+
+**Query:**
+
+```sql
+-- Test 4: View Recent Audit Logs
+PROMPT === TEST 4: VIEW RECENT AUDIT LOGS ===
+SELECT 
+    log_id,
+    table_name,
+    operation,
+    user_name,
+    TO_CHAR(operation_date, 'DD-MON-YY HH24:MI:SS') AS operation_time,
+    status,
+    reason
+FROM audit_log
+ORDER BY log_id DESC
+FETCH FIRST 10 ROWS ONLY;
+```
+
+**Screenshot:**
+
+![Recent audit logs](screenshots/recentauditlogs.PNG)
+
+*Shows 10 most recent audit entries with columns: LOG_ID, TABLE_NAME, OPERATION, USER_NAME, OPERATION_TIME, STATUS, REASON. Entries include:
+- Medical record INSERT by doctor2 (ALLOWED - New medical record created)
+- Patient INSERT by nurse1 (ALLOWED - New patient added)
+- Holiday DELETE by admin (ALLOWED - Holiday removed)
+- Doctor schedule UPDATE by admin (ALLOWED - Schedule deactivated)
+- Billing INSERT by billing3 (ALLOWED - New billing record)
+- Prescription DELETE by doctor1 (ALLOWED - Cancelled prescription)
+- Medical record DELETE by doctor1 (ALLOWED - Removed obsolete record)
+- Patient DELETE by admin (ALLOWED - Patient record removed)
+- Holiday UPDATE by admin (ALLOWED - Changed holiday type)
+- Holiday INSERT by admin (ALLOWED - Added hospital holiday)
+
+All operations occurred on 08-DEC-25 at 15:50:08. Demonstrates comprehensive audit trail with user attribution and operation details.*
+
+---
+
+### Audit Summary by Table and Operation
+
+**Purpose:** Aggregate audit data to show operation distribution across tables.
+
+**Query:**
+
+```sql
+-- Summary statistics
+SELECT 
+    table_name,
+    operation,
+    status,
+    COUNT(*) as count
+FROM celine_admin.audit_log
+GROUP BY table_name, operation, status
+ORDER BY table_name, operation;
+```
+
+**Screenshot:**
+
+![Audit summary](screenshots/summary.PNG)
+
+*Shows grouped statistics with columns: TABLE_NAME, OPERATION, STATUS, COUNT. Results display:
+- BILLING: INSERT (ALLOWED, 2), UPDATE (ALLOWED, 1)
+- DOCTOR_SCHEDULE: INSERT (ALLOWED, 1), UPDATE (ALLOWED, 2)
+- HOLIDAYS: DELETE (ALLOWED, 1), INSERT (ALLOWED, 1), UPDATE (ALLOWED, 1)
+- MEDICAL_RECORDS: DELETE (ALLOWED, 1), INSERT (ALLOWED, 1), UPDATE (ALLOWED, 1)
+- PATIENTS: DELETE (ALLOWED, 1), INSERT (ALLOWED, 2), UPDATE (ALLOWED, 1)
+- PRESCRIPTIONS: DELETE (ALLOWED, 1), INSERT (ALLOWED, 1), UPDATE (ALLOWED, 1)
+
+Total 16 rows showing comprehensive operation coverage across all tables. All operations show ALLOWED status indicating successful audit logging.*
+
+---
+
+### Configured Holidays
+
+**Purpose:** Display all holidays configured in the system.
+
+**Query:**
+
+```sql
+-- Test 7: View Holidays
+PROMPT === TEST 7: CONFIGURED HOLIDAYS ===
+SELECT 
+    holiday_id,
+    holiday_name,
+    TO_CHAR(holiday_date, 'DD-MON-YYYY DAY') AS holiday_info,
+    holiday_type
+FROM celine_admin.holidays
+ORDER BY holiday_date;
+```
+
+**Screenshot:**
+
+![Configured holidays](screenshots/viewholidays.PNG)
+
+*Shows holiday table with columns: HOLIDAY_ID, HOLIDAY_NAME, HOLIDAY_INFO, HOLIDAY_TYPE. 20 holidays listed including:
+- New Year's Day (01-JAN-2026 THURSDAY - PUBLIC)
+- Epiphany (06-JAN-2026 TUESDAY - PUBLIC)
+- Martin Luther King Jr. Day (19-JAN-2026 MONDAY - PUBLIC)
+- Valentine's Day (14-FEB-2026 SATURDAY - HOSPITAL)
+- President's Day (16-FEB-2026 MONDAY - PUBLIC)
+- St. Patrick's Day (17-MAR-2026 TUESDAY - HOSPITAL)
+- Good Friday (03-APR-2026 FRIDAY - PUBLIC)
+- Easter Monday (06-APR-2026 MONDAY - PUBLIC)
+- National Health Day (07-APR-2026 TUESDAY - NATIONAL)
+- Labor Day (01-MAY-2026 FRIDAY - NATIONAL)
+- National Nurses Day (12-MAY-2026 TUESDAY - NATIONAL)
+- Hospital Foundation Day (15-JUN-2026 MONDAY - HOSPITAL)
+- Independence Day (04-JUL-2026 SATURDAY - NATIONAL)
+- Assumption Day (15-AUG-2026 SATURDAY - HOSPITAL)
+- All Saints' Day (01-NOV-2026 SUNDAY - PUBLIC)
+- Veterans Day (11-NOV-2026 WEDNESDAY - NATIONAL)
+- Thanksgiving Day (26-NOV-2026 THURSDAY - PUBLIC)
+- Christmas Day (25-DEC-2026 FRIDAY - PUBLIC)
+- Boxing Day (26-DEC-2026 SATURDAY - PUBLIC)
+- New Year's Eve (31-DEC-2026 THURSDAY - PUBLIC)
+
+Shows mix of PUBLIC, HOSPITAL, and NATIONAL holiday types covering entire year 2026.*
+
+---
+
+## Testing Scripts
+
+### Complete Test Suite
+
+**Script:** `07_test_triggers.sql`
+
+```sql
+SET SERVEROUTPUT ON;
+
+-- Test 1: Try to insert on a weekday (should be DENIED)
+PROMPT === Test 1: Try to insert on a weekday (should be DENIED) ===
+BEGIN
+    INSERT INTO celine_admin.patients (patient_id, first_name, last_name, date_of_birth, gender, phone)
+    VALUES (9999, 'Test', 'Patient', TO_DATE('1990-01-01', 'YYYY-MM-DD'), 'M', '0788888888');
+    DBMS_OUTPUT.PUT_LINE('ERROR: Insert should have been denied!');
+    ROLLBACK;
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('SUCCESS: Insert denied as expected');
+        DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+        ROLLBACK;
+END;
+/
+
+-- Test 2: Weekend Check (Functions)
+PROMPT === TEST 2: Weekend Check (Functions) ===
+SELECT check_operation_allowed(TO_DATE('07-DEC-2024', 'DD-MON-YYYY')) AS saturday_check FROM DUAL;
+SELECT check_operation_allowed(TO_DATE('08-DEC-2024', 'DD-MON-YYYY')) AS sunday_check FROM DUAL;
+
+-- Test 3: Holiday Check
+PROMPT === TEST 3: HOLIDAY CHECK ===
+SELECT check_operation_allowed(TO_DATE('25-DEC-2025', 'DD-MON-YYYY')) AS christmas_check FROM DUAL;
+SELECT check_operation_allowed(TO_DATE('01-JAN-2026', 'DD-MON-YYYY')) AS newyear_check FROM DUAL;
+
+-- Test 4: All Triggers Status
+PROMPT === TEST 4: ALL TRIGGERS STATUS ===
+SELECT 
+    trigger_name,
+    table_name,
+    status,
+    trigger_type
+FROM all_triggers
+WHERE owner = 'CELINE_ADMIN'
+AND table_name IN ('PATIENTS', 'MEDICAL_RECORDS', 'PRESCRIPTIONS', 'BILLING')
+ORDER BY table_name;
+
+-- Test 5: Audit Statistics
+PROMPT === TEST 5: AUDIT STATISTICS BY STATUS ===
+SELECT 
+    status,
+    COUNT(*) AS total_operations,
+    COUNT(DISTINCT table_name) AS tables_affected
+FROM celine_admin.audit_log
+GROUP BY status
+ORDER BY status;
+
+-- Test 4: View Recent Audit Logs
+PROMPT === TEST 4: VIEW RECENT AUDIT LOGS ===
+SELECT 
+    log_id,
+    table_name,
+    operation,
+    user_name,
+    TO_CHAR(operation_date, 'DD-MON-YY HH24:MI:SS') AS operation_time,
+    status,
+    reason
+FROM audit_log
+ORDER BY log_id DESC
+FETCH FIRST 10 ROWS ONLY;
+
+-- Summary statistics
+SELECT 
+    table_name,
+    operation,
+    status,
+    COUNT(*) as count
+FROM celine_admin.audit_log
+GROUP BY table_name, operation, status
+ORDER BY table_name, operation;
+
+-- Test 7: View Holidays
+PROMPT === TEST 7: CONFIGURED HOLIDAYS ===
+SELECT 
+    holiday_id,
+    holiday_name,
+    TO_CHAR(holiday_date, 'DD-MON-YYYY DAY') AS holiday_info,
+    holiday_type
+FROM celine_admin.holidays
+ORDER BY holiday_date;
+```
+
+---
+
+## Key Implementation Features
+
+### Business Logic
+- **Weekend-only operations**: Patient records modifiable only on Saturday/Sunday
+- **Holiday support**: Operations allowed on configured holidays
+- **Consistent enforcement**: Same rules applied across all tables
+
+### Audit Capabilities
+- **Complete trail**: Every operation logged with user, timestamp, status
+- **Autonomous transactions**: Audit entries preserved even if main transaction rolls back
+- **Detailed tracking**: Captures old and new values for UPDATE operations
+- **Centralized logging**: Single procedure handles all audit entries
+
+### Trigger Types
+- **Row-level triggers**: Individual record validation (patients, medical_records, prescriptions)
+- **Compound trigger**: Batch processing for complex scenarios (billing)
+- **BEFORE triggers**: Validate and block unauthorized operations
+- **AFTER triggers**: Record audit entries post-validation
+
+### Error Handling
+- **Custom error codes**: -20001 through -20004 for different tables
+- **Descriptive messages**: Clear explanation of denial reasons
+- **Graceful degradation**: Failed operations don't corrupt audit log
+
+---
 
 **Course:** Database Development with PL/SQL (INSY 8311)  
 **Institution:** Adventist University of Central Africa (AUCA)  

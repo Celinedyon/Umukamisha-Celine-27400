@@ -2,7 +2,6 @@
 **ID:** 27400 
 ## Hospital Appointment Optimization System
 
-# Hospital Appointment Optimization System
 ## Problem Statement & Key Objectives
 
 ---

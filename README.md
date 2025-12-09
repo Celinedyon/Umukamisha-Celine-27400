@@ -2990,6 +2990,492 @@ This document outlines the Business Intelligence requirements for the Hospital A
 5. **Phase 5 (Ongoing):** Monitoring, optimization, and enhancement
 
 ---
+-- ============================================================================
+-- BUSINESS INTELLIGENCE ANALYTICAL QUERIES
+-- Hospital Appointment Optimization System
+-- Student: Umukamisha Celine (ID: 27400)
+-- ============================================================================
+
+-- ============================================================================
+-- SECTION 1: OPERATIONAL ANALYTICS
+-- ============================================================================
+
+-- Query 1.1: Monthly Appointment Volume with Growth Rate
+-- Purpose: Track appointment trends and calculate month-over-month growth
+SELECT 
+    month,
+    appointment_count,
+    cumulative_total,
+    LAG(appointment_count) OVER (ORDER BY month) as prev_month_count,
+    ROUND(
+        ((appointment_count - LAG(appointment_count) OVER (ORDER BY month)) / 
+         LAG(appointment_count) OVER (ORDER BY month)) * 100, 
+        2
+    ) as growth_rate_pct
+FROM (
+    SELECT 
+        TO_CHAR(appointment_date, 'YYYY-MM') as month,
+        COUNT(*) as appointment_count,
+        SUM(COUNT(*)) OVER (ORDER BY TO_CHAR(appointment_date, 'YYYY-MM')) as cumulative_total
+    FROM appointments
+    GROUP BY TO_CHAR(appointment_date, 'YYYY-MM')
+)
+ORDER BY month;
+
+
+-- Query 1.2: Doctor Utilization Rate Analysis
+-- Purpose: Calculate how efficiently doctors are using their available slots
+SELECT 
+    d.doctor_id,
+    d.first_name || ' ' || d.last_name as doctor_name,
+    d.specialization,
+    dep.dept_name,
+    COUNT(a.appointment_id) as booked_appointments,
+    ds.max_appointments * 4 as monthly_capacity,
+    ROUND(COUNT(a.appointment_id) / NULLIF(ds.max_appointments * 4, 0) * 100, 2) as utilization_rate_pct,
+    CASE 
+        WHEN COUNT(a.appointment_id) / NULLIF(ds.max_appointments * 4, 0) * 100 < 60 THEN 'Under-utilized'
+        WHEN COUNT(a.appointment_id) / NULLIF(ds.max_appointments * 4, 0) * 100 BETWEEN 60 AND 85 THEN 'Optimal'
+        ELSE 'Over-utilized'
+    END as utilization_status
+FROM doctors d
+LEFT JOIN appointments a ON d.doctor_id = a.doctor_id 
+    AND a.appointment_date >= ADD_MONTHS(SYSDATE, -1)
+LEFT JOIN doctor_schedule ds ON d.doctor_id = ds.doctor_id
+LEFT JOIN departments dep ON d.dept_id = dep.dept_id
+WHERE d.status = 'ACTIVE'
+GROUP BY d.doctor_id, d.first_name, d.last_name, d.specialization, 
+         dep.dept_name, ds.max_appointments
+ORDER BY utilization_rate_pct DESC;
+
+
+-- Query 1.3: Peak Hours Analysis
+-- Purpose: Identify busiest appointment times for staffing optimization
+SELECT 
+    appointment_time,
+    COUNT(*) as appointment_count,
+    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) as percentage_of_total,
+    RANK() OVER (ORDER BY COUNT(*) DESC) as popularity_rank
+FROM appointments
+WHERE appointment_date >= ADD_MONTHS(SYSDATE, -3)
+GROUP BY appointment_time
+ORDER BY appointment_count DESC;
+
+
+-- Query 1.4: Wait Time Distribution Analysis
+-- Purpose: Analyze time between booking and appointment date
+SELECT 
+    CASE 
+        WHEN days_to_appointment <= 7 THEN '0-7 days'
+        WHEN days_to_appointment <= 14 THEN '8-14 days'
+        WHEN days_to_appointment <= 30 THEN '15-30 days'
+        ELSE '30+ days'
+    END as wait_time_bucket,
+    COUNT(*) as patient_count,
+    ROUND(AVG(days_to_appointment), 1) as avg_wait_days,
+    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) as percentage
+FROM (
+    SELECT 
+        appointment_id,
+        patient_id,
+        appointment_date - created_date as days_to_appointment
+    FROM appointments
+    WHERE appointment_date >= SYSDATE
+)
+GROUP BY CASE 
+    WHEN days_to_appointment <= 7 THEN '0-7 days'
+    WHEN days_to_appointment <= 14 THEN '8-14 days'
+    WHEN days_to_appointment <= 30 THEN '15-30 days'
+    ELSE '30+ days'
+END
+ORDER BY 
+    CASE wait_time_bucket
+        WHEN '0-7 days' THEN 1
+        WHEN '8-14 days' THEN 2
+        WHEN '15-30 days' THEN 3
+        ELSE 4
+    END;
+
+
+-- Query 1.5: Appointment Status Distribution
+-- Purpose: Track appointment outcomes for quality metrics
+SELECT 
+    status,
+    COUNT(*) as count,
+    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) as percentage,
+    TO_CHAR(MIN(created_date), 'DD-MON-YYYY') as earliest_record,
+    TO_CHAR(MAX(created_date), 'DD-MON-YYYY') as latest_record
+FROM appointments
+GROUP BY status
+ORDER BY count DESC;
+
+
+-- ============================================================================
+-- SECTION 2: FINANCIAL ANALYTICS
+-- ============================================================================
+
+-- Query 2.1: Revenue by Doctor - Top Performers
+-- Purpose: Identify highest revenue-generating doctors
+SELECT 
+    d.doctor_id,
+    d.first_name || ' ' || d.last_name as doctor_name,
+    d.specialization,
+    dep.dept_name,
+    COUNT(b.bill_id) as total_bills,
+    SUM(b.total_amount) as total_revenue,
+    AVG(b.total_amount) as avg_revenue_per_visit,
+    RANK() OVER (ORDER BY SUM(b.total_amount) DESC) as revenue_rank
+FROM billing b
+JOIN doctors d ON b.doctor_id = d.doctor_id
+JOIN departments dep ON d.dept_id = dep.dept_id
+WHERE b.payment_date IS NOT NULL
+GROUP BY d.doctor_id, d.first_name, d.last_name, d.specialization, dep.dept_name
+ORDER BY total_revenue DESC
+FETCH FIRST 10 ROWS ONLY;
+
+
+-- Query 2.2: Revenue by Department with Targets
+-- Purpose: Track departmental financial performance
+SELECT 
+    dep.dept_name,
+    COUNT(DISTINCT d.doctor_id) as active_doctors,
+    COUNT(b.bill_id) as total_bills,
+    SUM(b.total_amount) as total_revenue,
+    AVG(b.total_amount) as avg_revenue_per_bill,
+    ROUND(SUM(b.total_amount) / COUNT(DISTINCT d.doctor_id), 2) as revenue_per_doctor,
+    RANK() OVER (ORDER BY SUM(b.total_amount) DESC) as dept_rank
+FROM billing b
+JOIN doctors d ON b.doctor_id = d.doctor_id
+JOIN departments dep ON d.dept_id = dep.dept_id
+WHERE b.payment_date IS NOT NULL
+GROUP BY dep.dept_name
+ORDER BY total_revenue DESC;
+
+
+-- Query 2.3: Payment Collection Analysis
+-- Purpose: Monitor payment collection efficiency
+SELECT 
+    CASE 
+        WHEN payment_date IS NOT NULL THEN 'PAID'
+        WHEN payment_date IS NULL AND created_date < SYSDATE - 30 THEN 'OVERDUE'
+        WHEN payment_date IS NULL THEN 'PENDING'
+    END as payment_status,
+    COUNT(*) as bill_count,
+    SUM(total_amount) as total_amount,
+    ROUND(AVG(total_amount), 2) as avg_amount,
+    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) as percentage_of_bills,
+    ROUND(SUM(total_amount) * 100.0 / SUM(SUM(total_amount)) OVER (), 2) as percentage_of_revenue
+FROM billing
+GROUP BY CASE 
+    WHEN payment_date IS NOT NULL THEN 'PAID'
+    WHEN payment_date IS NULL AND created_date < SYSDATE - 30 THEN 'OVERDUE'
+    WHEN payment_date IS NULL THEN 'PENDING'
+END
+ORDER BY bill_count DESC;
+
+
+-- Query 2.4: Payment Method Distribution
+-- Purpose: Analyze preferred payment methods
+SELECT 
+    payment_method,
+    COUNT(*) as transaction_count,
+    SUM(total_amount) as total_revenue,
+    AVG(total_amount) as avg_transaction_amount,
+    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) as percentage_of_transactions,
+    ROUND(SUM(total_amount) * 100.0 / SUM(SUM(total_amount)) OVER (), 2) as percentage_of_revenue
+FROM billing
+WHERE payment_date IS NOT NULL
+GROUP BY payment_method
+ORDER BY transaction_count DESC;
+
+
+-- Query 2.5: Monthly Revenue Trends with Forecasting Base
+-- Purpose: Track revenue trends for forecasting
+SELECT 
+    TO_CHAR(payment_date, 'YYYY-MM') as month,
+    COUNT(*) as bills_paid,
+    SUM(total_amount) as monthly_revenue,
+    AVG(total_amount) as avg_bill_amount,
+    SUM(SUM(total_amount)) OVER (ORDER BY TO_CHAR(payment_date, 'YYYY-MM')) as cumulative_revenue,
+    AVG(SUM(total_amount)) OVER (ORDER BY TO_CHAR(payment_date, 'YYYY-MM') 
+                                  ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) as rolling_3month_avg
+FROM billing
+WHERE payment_date IS NOT NULL
+GROUP BY TO_CHAR(payment_date, 'YYYY-MM')
+ORDER BY month;
+
+
+-- ============================================================================
+-- SECTION 3: CLINICAL ANALYTICS
+-- ============================================================================
+
+-- Query 3.1: Most Common Diagnoses
+-- Purpose: Identify top medical conditions for resource planning
+SELECT 
+    diagnosis,
+    COUNT(*) as case_count,
+    COUNT(DISTINCT patient_id) as unique_patients,
+    COUNT(DISTINCT doctor_id) as treating_doctors,
+    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) as percentage_of_cases,
+    RANK() OVER (ORDER BY COUNT(*) DESC) as diagnosis_rank
+FROM medical_records
+WHERE diagnosis IS NOT NULL
+GROUP BY diagnosis
+ORDER BY case_count DESC
+FETCH FIRST 15 ROWS ONLY;
+
+
+-- Query 3.2: Prescription Volume Analysis
+-- Purpose: Track medication prescription patterns
+SELECT 
+    medicine_name,
+    COUNT(*) as prescription_count,
+    COUNT(DISTINCT patient_id) as unique_patients,
+    COUNT(DISTINCT doctor_id) as prescribing_doctors,
+    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) as percentage_of_prescriptions,
+    RANK() OVER (ORDER BY COUNT(*) DESC) as popularity_rank
+FROM prescriptions
+GROUP BY medicine_name
+ORDER BY prescription_count DESC;
+
+
+-- Query 3.3: Doctor Specialty Performance
+-- Purpose: Analyze patient volume by medical specialization
+SELECT 
+    d.specialization,
+    COUNT(DISTINCT d.doctor_id) as doctor_count,
+    COUNT(a.appointment_id) as total_appointments,
+    COUNT(mr.record_id) as medical_records_created,
+    COUNT(p.prescription_id) as prescriptions_issued,
+    ROUND(COUNT(a.appointment_id) / COUNT(DISTINCT d.doctor_id), 2) as avg_appointments_per_doctor,
+    RANK() OVER (ORDER BY COUNT(a.appointment_id) DESC) as specialty_rank
+FROM doctors d
+LEFT JOIN appointments a ON d.doctor_id = a.doctor_id
+LEFT JOIN medical_records mr ON a.appointment_id = mr.appointment_id
+LEFT JOIN prescriptions p ON mr.record_id = p.record_id
+WHERE d.status = 'ACTIVE'
+GROUP BY d.specialization
+ORDER BY total_appointments DESC;
+
+
+-- Query 3.4: Follow-up Compliance Tracking
+-- Purpose: Monitor patient follow-up adherence
+SELECT 
+    CASE 
+        WHEN follow_up_date IS NULL THEN 'No Follow-up Required'
+        WHEN follow_up_date > SYSDATE THEN 'Follow-up Scheduled'
+        WHEN EXISTS (
+            SELECT 1 FROM appointments a2 
+            WHERE a2.patient_id = mr.patient_id 
+            AND a2.appointment_date >= mr.follow_up_date
+            AND a2.appointment_date <= mr.follow_up_date + 7
+        ) THEN 'Follow-up Completed'
+        ELSE 'Follow-up Missed'
+    END as follow_up_status,
+    COUNT(*) as record_count,
+    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) as percentage
+FROM medical_records mr
+GROUP BY CASE 
+    WHEN follow_up_date IS NULL THEN 'No Follow-up Required'
+    WHEN follow_up_date > SYSDATE THEN 'Follow-up Scheduled'
+    WHEN EXISTS (
+        SELECT 1 FROM appointments a2 
+        WHERE a2.patient_id = mr.patient_id 
+        AND a2.appointment_date >= mr.follow_up_date
+        AND a2.appointment_date <= mr.follow_up_date + 7
+    ) THEN 'Follow-up Completed'
+    ELSE 'Follow-up Missed'
+END
+ORDER BY record_count DESC;
+
+
+-- ============================================================================
+-- SECTION 4: COMPLIANCE & AUDIT ANALYTICS
+-- ============================================================================
+
+-- Query 4.1: Audit Coverage by Table
+-- Purpose: Verify comprehensive audit trail across all tables
+SELECT 
+    table_name,
+    COUNT(*) as total_operations,
+    COUNT(DISTINCT user_name) as unique_users,
+    COUNT(CASE WHEN operation = 'INSERT' THEN 1 END) as inserts,
+    COUNT(CASE WHEN operation = 'UPDATE' THEN 1 END) as updates,
+    COUNT(CASE WHEN operation = 'DELETE' THEN 1 END) as deletes,
+    COUNT(CASE WHEN status = 'ALLOWED' THEN 1 END) as allowed_ops,
+    COUNT(CASE WHEN status = 'DENIED' THEN 1 END) as denied_ops,
+    ROUND(COUNT(CASE WHEN status = 'DENIED' THEN 1 END) * 100.0 / COUNT(*), 2) as denial_rate_pct
+FROM audit_log
+GROUP BY table_name
+ORDER BY total_operations DESC;
+
+
+-- Query 4.2: User Activity Analysis
+-- Purpose: Monitor database user operations for security
+SELECT 
+    user_name,
+    COUNT(*) as total_operations,
+    COUNT(DISTINCT table_name) as tables_accessed,
+    COUNT(CASE WHEN operation = 'INSERT' THEN 1 END) as inserts,
+    COUNT(CASE WHEN operation = 'UPDATE' THEN 1 END) as updates,
+    COUNT(CASE WHEN operation = 'DELETE' THEN 1 END) as deletes,
+    COUNT(CASE WHEN status = 'DENIED' THEN 1 END) as denied_attempts,
+    TO_CHAR(MIN(operation_date), 'DD-MON-YYYY HH24:MI') as first_activity,
+    TO_CHAR(MAX(operation_date), 'DD-MON-YYYY HH24:MI') as last_activity
+FROM audit_log
+GROUP BY user_name
+ORDER BY total_operations DESC;
+
+
+-- Query 4.3: Restriction Rule Enforcement Analysis
+-- Purpose: Verify weekend/holiday restriction compliance
+SELECT 
+    TO_CHAR(operation_date, 'DAY') as day_of_week,
+    COUNT(*) as operation_attempts,
+    COUNT(CASE WHEN status = 'ALLOWED' THEN 1 END) as allowed,
+    COUNT(CASE WHEN status = 'DENIED' THEN 1 END) as denied,
+    ROUND(COUNT(CASE WHEN status = 'DENIED' THEN 1 END) * 100.0 / COUNT(*), 2) as denial_rate_pct
+FROM audit_log
+GROUP BY TO_CHAR(operation_date, 'DAY')
+ORDER BY 
+    CASE TO_CHAR(operation_date, 'DAY')
+        WHEN 'MONDAY   ' THEN 1
+        WHEN 'TUESDAY  ' THEN 2
+        WHEN 'WEDNESDAY' THEN 3
+        WHEN 'THURSDAY ' THEN 4
+        WHEN 'FRIDAY   ' THEN 5
+        WHEN 'SATURDAY ' THEN 6
+        WHEN 'SUNDAY   ' THEN 7
+    END;
+
+
+-- Query 4.4: Recent Audit Activity Timeline
+-- Purpose: Real-time monitoring of database operations
+SELECT 
+    log_id,
+    table_name,
+    operation,
+    user_name,
+    TO_CHAR(operation_date, 'DD-MON-YYYY HH24:MI:SS') as operation_time,
+    status,
+    SUBSTR(reason, 1, 50) as reason_summary,
+    CASE 
+        WHEN status = 'DENIED' THEN '🚫 BLOCKED'
+        ELSE '✓ SUCCESS'
+    END as result_indicator
+FROM audit_log
+ORDER BY operation_date DESC
+FETCH FIRST 20 ROWS ONLY;
+
+
+-- ============================================================================
+-- SECTION 5: PATIENT ANALYTICS
+-- ============================================================================
+
+-- Query 5.1: Patient Demographics Summary
+-- Purpose: Understand patient population characteristics
+SELECT 
+    gender,
+    COUNT(*) as patient_count,
+    ROUND(AVG(FLOOR(MONTHS_BETWEEN(SYSDATE, date_of_birth) / 12)), 1) as avg_age,
+    MIN(FLOOR(MONTHS_BETWEEN(SYSDATE, date_of_birth) / 12)) as min_age,
+    MAX(FLOOR(MONTHS_BETWEEN(SYSDATE, date_of_birth) / 12)) as max_age,
+    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) as percentage
+FROM patients
+WHERE status = 'ACTIVE'
+GROUP BY gender
+ORDER BY patient_count DESC;
+
+
+-- Query 5.2: Patient Age Distribution
+-- Purpose: Segment patients by age groups for targeted services
+SELECT 
+    CASE 
+        WHEN age < 18 THEN 'Pediatric (0-17)'
+        WHEN age BETWEEN 18 AND 35 THEN 'Young Adult (18-35)'
+        WHEN age BETWEEN 36 AND 55 THEN 'Middle Age (36-55)'
+        WHEN age BETWEEN 56 AND 70 THEN 'Senior (56-70)'
+        ELSE 'Elderly (70+)'
+    END as age_group,
+    COUNT(*) as patient_count,
+    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) as percentage
+FROM (
+    SELECT 
+        patient_id,
+        FLOOR(MONTHS_BETWEEN(SYSDATE, date_of_birth) / 12) as age
+    FROM patients
+    WHERE status = 'ACTIVE'
+)
+GROUP BY CASE 
+    WHEN age < 18 THEN 'Pediatric (0-17)'
+    WHEN age BETWEEN 18 AND 35 THEN 'Young Adult (18-35)'
+    WHEN age BETWEEN 36 AND 55 THEN 'Middle Age (36-55)'
+    WHEN age BETWEEN 56 AND 70 THEN 'Senior (56-70)'
+    ELSE 'Elderly (70+)'
+END
+ORDER BY 
+    CASE age_group
+        WHEN 'Pediatric (0-17)' THEN 1
+        WHEN 'Young Adult (18-35)' THEN 2
+        WHEN 'Middle Age (36-55)' THEN 3
+        WHEN 'Senior (56-70)' THEN 4
+        ELSE 5
+    END;
+
+
+-- Query 5.3: Patient Visit Frequency Analysis
+-- Purpose: Identify high-frequency patients for care management
+SELECT 
+    p.patient_id,
+    p.first_name || ' ' || p.last_name as patient_name,
+    FLOOR(MONTHS_BETWEEN(SYSDATE, p.date_of_birth) / 12) as age,
+    COUNT(a.appointment_id) as total_visits,
+    MIN(a.appointment_date) as first_visit,
+    MAX(a.appointment_date) as last_visit,
+    ROUND(MONTHS_BETWEEN(MAX(a.appointment_date), MIN(a.appointment_date)), 1) as months_as_patient,
+    CASE 
+        WHEN COUNT(a.appointment_id) >= 10 THEN 'High Frequency'
+        WHEN COUNT(a.appointment_id) BETWEEN 5 AND 9 THEN 'Medium Frequency'
+        WHEN COUNT(a.appointment_id) BETWEEN 2 AND 4 THEN 'Low Frequency'
+        ELSE 'Single Visit'
+    END as visit_category
+FROM patients p
+LEFT JOIN appointments a ON p.patient_id = a.patient_id
+WHERE p.status = 'ACTIVE'
+GROUP BY p.patient_id, p.first_name, p.last_name, p.date_of_birth
+HAVING COUNT(a.appointment_id) > 0
+ORDER BY total_visits DESC
+FETCH FIRST 20 ROWS ONLY;
+
+
+-- ============================================================================
+-- SECTION 6: COMPREHENSIVE EXECUTIVE DASHBOARD QUERY
+-- ============================================================================
+
+-- Query 6.1: Executive KPI Summary - Single Query for Dashboard
+-- Purpose: Provide all key metrics in one comprehensive view
+SELECT 
+    -- Operational Metrics
+    (SELECT COUNT(*) FROM appointments WHERE appointment_date >= TRUNC(SYSDATE, 'MM')) as appointments_this_month,
+    (SELECT COUNT(*) FROM patients WHERE status = 'ACTIVE') as active_patients,
+    (SELECT COUNT(*) FROM doctors WHERE status = 'ACTIVE') as active_doctors,
+    (SELECT COUNT(DISTINCT dept_id) FROM doctors WHERE status = 'ACTIVE') as active_departments,
+    
+    -- Financial Metrics
+    (SELECT SUM(total_amount) FROM billing WHERE payment_date >= TRUNC(SYSDATE, 'MM')) as revenue_this_month,
+    (SELECT SUM(total_amount) FROM billing WHERE payment_date IS NULL) as outstanding_receivables,
+    (SELECT ROUND(AVG(total_amount), 2) FROM billing WHERE payment_date IS NOT NULL) as avg_bill_amount,
+    
+    -- Clinical Metrics
+    (SELECT COUNT(*) FROM medical_records WHERE record_date >= TRUNC(SYSDATE, 'MM')) as records_this_month,
+    (SELECT COUNT(*) FROM prescriptions WHERE prescribed_date >= TRUNC(SYSDATE, 'MM')) as prescriptions_this_month,
+    
+    -- Compliance Metrics
+    (SELECT COUNT(*) FROM audit_log WHERE operation_date >= TRUNC(SYSDATE, 'DD')) as operations_today,
+    (SELECT COUNT(*) FROM audit_log WHERE status = 'DENIED' AND operation_date >= TRUNC(SYSDATE, 'MM')) as denied_operations_this_month,
+    (SELECT ROUND(COUNT(CASE WHEN status = 'DENIED' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 2) 
+     FROM audit_log WHERE operation_date >= TRUNC(SYSDATE, 'MM')) as denial_rate_pct
+FROM dual;
 
 ## Conclusion
 
